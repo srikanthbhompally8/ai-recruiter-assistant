@@ -40,8 +40,19 @@ isort==5.13.2
 redis==5.0.1
 requests==2.31.0
 
+# Async & Task Queue
+celery==5.3.4
+python-dateutil==2.8.2
+
+# Message Queue
+sqs==0.0.1
+
 # Logging & Monitoring
 python-json-logger==2.0.7
 
 # CORS
 python-cors==1.0.1
+
+# Data Processing
+numpy==1.24.3
+pandas==2.1.3
