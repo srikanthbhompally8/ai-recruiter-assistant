@@ -1,5 +1,5 @@
 """Match Model"""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, ARRAY, Numeric
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, ARRAY, Numeric, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
 from datetime import datetime
@@ -34,7 +34,7 @@ class Match(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
-        {"indexes": [{"columns": ["candidate_id", "job_id"], "unique": True}]},
+        Index('ix_matches_candidate_job', 'candidate_id', 'job_id', unique=True),
     )
 
     def __repr__(self):
