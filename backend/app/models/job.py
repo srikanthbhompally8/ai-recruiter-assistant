@@ -1,6 +1,6 @@
 """Job Description Model"""
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, ARRAY, Numeric
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Numeric, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
 import uuid
@@ -15,15 +15,15 @@ class JobDescription(Base):
     company = Column(String(255), nullable=True)
 
     # Parsed JD data
-    required_skills = Column(ARRAY(String), nullable=True)
-    nice_to_have_skills = Column(ARRAY(String), nullable=True)
+    required_skills = Column(Text, nullable=True)
+    nice_to_have_skills = Column(Text, nullable=True)
     experience_required = Column(Integer, nullable=True)
     job_type = Column(String(50), nullable=True)
     salary_min = Column(Numeric(10, 2), nullable=True)
     salary_max = Column(Numeric(10, 2), nullable=True)
 
     # Structured data
-    job_details_json = Column(JSONB, nullable=True)
+    job_details_json = Column(JSON, nullable=True)
     description = Column(Text, nullable=True)
 
     # Status

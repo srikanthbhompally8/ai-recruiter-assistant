@@ -1,6 +1,6 @@
 """Match Model"""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, ARRAY, Numeric, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Numeric, Index, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
 import uuid
@@ -19,10 +19,10 @@ class Match(Base):
     overall_score = Column(Numeric(5, 2), nullable=True)
 
     # Matching details
-    matched_skills = Column(ARRAY(String), nullable=True)
-    missing_skills = Column(ARRAY(String), nullable=True)
+    matched_skills = Column(Text, nullable=True)
+    missing_skills = Column(Text, nullable=True)
     match_explanation = Column(Text, nullable=True)
-    match_details_json = Column(JSONB, nullable=True)
+    match_details_json = Column(JSON, nullable=True)
 
     # Recommendation
     recommendation = Column(String(50), nullable=True)
