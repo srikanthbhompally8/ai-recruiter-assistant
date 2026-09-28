@@ -13,69 +13,44 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import pytest
-import asyncio
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from fastapi.testclient import TestClient
 from app.models import Base, User, Candidate, JobDescription
 from app.main import app
+from app.database import get_db
+from app.services.auth_service import auth_service
 import uuid
-import json
 
 
-@pytest.fixture
-def db():
-    """Create in-memory SQLite database for testing"""
-    engine = create_engine("sqlite:///:memory:")
+@pytest.fixture(scope="function")
+def db_session(tmp_path):
+    """Create file-based SQLite database with all test data"""
+    # Use a file-based database to avoid in-memory transaction issues
+    db_file = tmp_path / "test.db"
+    engine = create_engine(f"sqlite:///{db_file}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine)
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     session = SessionLocal()
-    yield session
-    session.close()
 
-
-@pytest.fixture
-def client():
-    """Create test client"""
-    return TestClient(app)
-
-
-@pytest.fixture
-def test_recruiter(db: Session):
-    """Create test recruiter user"""
+    # Create recruiter
+    recruiter_id = uuid.uuid4()
     recruiter = User(
-        id=uuid.uuid4(),
+        id=recruiter_id,
         email="recruiter@test.com",
         password_hash="$2b$12$R9h7cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUm",
         full_name="Test Recruiter",
-        role="recruiter"
+        role="recruiter",
+        is_active=True
     )
-    db.add(recruiter)
-    db.commit()
-    return recruiter
+    session.add(recruiter)
+    session.commit()
 
-
-@pytest.fixture
-def test_token(client, test_recruiter):
-    """Get test JWT token"""
-    response = client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": "recruiter@test.com",
-            "password": "password123"
-        }
-    )
-    if response.status_code == 200:
-        return response.json()["data"]["access_token"]
-    return None
-
-
-@pytest.fixture
-def backend_candidate(db: Session, test_recruiter: User):
-    """Create backend engineer candidate"""
-    candidate = Candidate(
-        id=uuid.uuid4(),
-        user_id=test_recruiter.id,
+    # Create backend candidate
+    candidate_id = uuid.uuid4()
+    backend_candidate = Candidate(
+        id=candidate_id,
+        user_id=recruiter_id,
         email="backend@test.com",
         full_name="Backend Engineer",
         experience_years=6,
@@ -83,17 +58,14 @@ def backend_candidate(db: Session, test_recruiter: User):
         current_title="Senior Backend Engineer",
         current_company="TechCorp"
     )
-    db.add(candidate)
-    db.commit()
-    return candidate
+    session.add(backend_candidate)
+    session.commit()
 
-
-@pytest.fixture
-def backend_job(db: Session, test_recruiter: User):
-    """Create backend job posting"""
-    job = JobDescription(
-        id=uuid.uuid4(),
-        user_id=test_recruiter.id,
+    # Create backend job
+    job_id = uuid.uuid4()
+    backend_job = JobDescription(
+        id=job_id,
+        user_id=recruiter_id,
         title="Senior Backend Engineer",
         company="TechStartup",
         required_skills="Python,FastAPI,PostgreSQL,Docker",
@@ -101,9 +73,49 @@ def backend_job(db: Session, test_recruiter: User):
         experience_required=6,
         status="open"
     )
-    db.add(job)
-    db.commit()
-    return job
+    session.add(backend_job)
+    session.commit()
+
+    # Store references for tests
+    session.recruiter = recruiter
+    session.backend_candidate = backend_candidate
+    session.backend_job = backend_job
+
+    yield session
+    session.close()
+
+
+@pytest.fixture
+def client(db_session):
+    """Create test client with overridden database"""
+    def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def test_token(db_session):
+    """Generate JWT token for test recruiter"""
+    token = auth_service.create_access_token(
+        user_id=str(db_session.recruiter.id),
+        email=db_session.recruiter.email
+    )
+    return token
+
+
+@pytest.fixture
+def backend_candidate(db_session):
+    """Get backend candidate"""
+    return db_session.backend_candidate
+
+
+@pytest.fixture
+def backend_job(db_session):
+    """Get backend job"""
+    return db_session.backend_job
 
 
 class TestSkillsMatchEndpoint:

@@ -12,22 +12,13 @@ import logging
 from app.services.recommendation_service import RecommendationService
 from app.services.skill_matcher_service import SkillMatcherService
 from app.services.auth_service import auth_service
-from app.database import SessionLocal
+from app.database import get_db
 from app.models import Candidate, JobDescription
 from sqlalchemy.orm import Session
 import uuid
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-def get_db():
-    """Dependency for database session"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def verify_token(authorization: Optional[str] = Header(None)):

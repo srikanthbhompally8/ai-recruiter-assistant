@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-09-28T16:11:34.083950",
+  "endpoints": {
+    "/skills/match": {
+      "total_requests": 50,
+      "successful": 50,
+      "success_rate": "100.0%",
+      "response_times_ms": {
+        "min": 5.07,
+        "max": 22.68,
+        "average": 8.9,
+        "median": 8.5,
+        "p95": 11.3,
+        "p99": 22.68
+      },
+      "errors": "None"
+    },
+    "/skills/rank": {
+      "total_requests": 50,
+      "successful": 50,
+      "success_rate": "100.0%",
+      "response_times_ms": {
+        "min": 4.25,
+        "max": 57.98,
+        "average": 16.13,
+        "median": 16.04,
+        "p95": 22.78,
+        "p99": 57.98
+      },
+      "errors": "None"
+    },
+    "/skills/gaps": {
+      "total_requests": 50,
+      "successful": 50,
+      "success_rate": "100.0%",
+      "response_times_ms": {
+        "min": 3.78,
+        "max": 14.89,
+        "average": 8.67,
+        "median": 8.43,
+        "p95": 12.92,
+        "p99": 14.89
+      },
+      "errors": "None"
+    }
+  },
+  "summary": {
+    "total_requests": 150,
+    "total_success": 150,
+    "success_rate": "100.0%",
+    "overall_response_times_ms": {
+      "average": 11.23,
+      "p95": 10.32,
+      "p99": 13.13
+    },
+    "targets": {
+      "average_ms": 500,
+      "p95_ms": 750,
+      "p99_ms": 1000
+    }
+  }
+}
