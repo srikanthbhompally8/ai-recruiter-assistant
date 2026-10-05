@@ -12,6 +12,9 @@ import logging
 from app.services.recommendation_service import RecommendationService
 from app.services.skill_matcher_service import SkillMatcherService
 from app.services.auth_service import auth_service
+from app.services.cache_service import cache_service
+from app.services.cache_metrics import cache_metrics
+from app.services.cache_invalidation import cache_invalidation
 from app.database import get_db
 from app.models import Candidate, JobDescription
 from sqlalchemy.orm import Session
@@ -74,6 +77,20 @@ async def match_candidate_skills(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid UUID format")
 
+        # Check cache first
+        cache_key = f"match:{candidate_id}:{job_id}"
+        cached_result = cache_service.get(cache_key)
+        if cached_result:
+            logger.info(f"✅ Cache HIT for {cache_key}")
+            cache_metrics.record_hit()
+            return {
+                "status": "success",
+                "data": cached_result,
+                "source": "cache"
+            }
+
+        cache_metrics.record_miss()
+
         # Get candidate and job from database
         candidate = db.query(Candidate).filter(
             Candidate.id == candidate_id
@@ -102,60 +119,68 @@ async def match_candidate_skills(
             str(job_id)
         )
 
+        result_data = {
+            "candidate_id": str(candidate_id),
+            "candidate_name": candidate.full_name,
+            "job_id": str(job_id),
+            "job_title": job.title,
+            "skills_match_score": round(match_result.skills_match_score / 100.0, 3),
+            "confidence_score": round(rec_score / 100.0, 3),
+            "exact_matches": [
+                {
+                    "skill": m.skill_name,
+                    "proficiency": m.proficiency_level or "unspecified",
+                    "importance": m.importance
+                }
+                for m in match_result.exact_matches
+            ],
+            "related_matches": [
+                {
+                    "skill": m.skill_name,
+                    "similarity_score": round(m.score / 100.0, 2),
+                    "importance": m.importance
+                }
+                for m in match_result.related_matches
+            ],
+            "missing_required": [
+                {
+                    "skill": m.skill_name,
+                    "importance": m.importance,
+                    "priority": "high"
+                }
+                for m in match_result.missing_required
+            ],
+            "missing_preferred": [
+                {
+                    "skill": m.skill_name,
+                    "importance": m.importance,
+                    "priority": "low"
+                }
+                for m in match_result.missing_preferred
+            ],
+            "gap_analysis": match_result.gap_analysis,
+            "recommendation": {
+                "match_quality": "excellent" if rec_score >= 80 else "good" if rec_score >= 60 else "fair" if rec_score >= 40 else "poor",
+                "recommendation_score": round(rec_score / 100.0, 3),
+                "scoring_breakdown": rec_breakdown
+            }
+        }
+
+        # Cache the result (5 minutes)
+        cache_service.set(cache_key, result_data, ttl=300)
+        logger.info(f"✅ Cached result for {cache_key}")
+
         return {
             "status": "success",
-            "data": {
-                "candidate_id": str(candidate_id),
-                "candidate_name": candidate.full_name,
-                "job_id": str(job_id),
-                "job_title": job.title,
-                "skills_match_score": round(match_result.skills_match_score / 100.0, 3),
-                "confidence_score": round(rec_score / 100.0, 3),
-                "exact_matches": [
-                    {
-                        "skill": m.skill_name,
-                        "proficiency": m.proficiency_level or "unspecified",
-                        "importance": m.importance
-                    }
-                    for m in match_result.exact_matches
-                ],
-                "related_matches": [
-                    {
-                        "skill": m.skill_name,
-                        "similarity_score": round(m.score / 100.0, 2),
-                        "importance": m.importance
-                    }
-                    for m in match_result.related_matches
-                ],
-                "missing_required": [
-                    {
-                        "skill": m.skill_name,
-                        "importance": m.importance,
-                        "priority": "high"
-                    }
-                    for m in match_result.missing_required
-                ],
-                "missing_preferred": [
-                    {
-                        "skill": m.skill_name,
-                        "importance": m.importance,
-                        "priority": "low"
-                    }
-                    for m in match_result.missing_preferred
-                ],
-                "gap_analysis": match_result.gap_analysis,
-                "recommendation": {
-                    "match_quality": "excellent" if rec_score >= 80 else "good" if rec_score >= 60 else "fair" if rec_score >= 40 else "poor",
-                    "recommendation_score": round(rec_score / 100.0, 3),
-                    "scoring_breakdown": rec_breakdown
-                }
-            }
+            "data": result_data,
+            "source": "computed"
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error matching skills: {e}")
+        cache_metrics.record_error()
         raise HTTPException(status_code=500, detail=f"Skill matching error: {str(e)}")
 
 
@@ -191,6 +216,20 @@ async def rank_candidates_by_skills(
             job_id = uuid.UUID(job_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+        # Check cache first
+        cache_key = f"rank:{job_id}:{limit}:{min_score}"
+        cached_result = cache_service.get(cache_key)
+        if cached_result:
+            logger.info(f"✅ Cache HIT for {cache_key}")
+            cache_metrics.record_hit()
+            return {
+                "status": "success",
+                "data": cached_result,
+                "source": "cache"
+            }
+
+        cache_metrics.record_miss()
 
         # Verify job exists
         job = db.query(JobDescription).filter(
@@ -231,36 +270,44 @@ async def rank_candidates_by_skills(
         # Sort by overall score
         enhanced_candidates.sort(key=lambda x: x["overall_score"], reverse=True)
 
+        result_data = {
+            "job_id": str(job_id),
+            "job_title": job.title,
+            "total_candidates_evaluated": len(top_candidates),
+            "candidates": [
+                {
+                    "rank": idx + 1,
+                    "candidate_id": c["candidate_id"],
+                    "name": c["name"],
+                    "email": c["email"],
+                    "current_title": c.get("current_title", ""),
+                    "experience_years": c.get("experience_years", 0),
+                    "skills_match_score": c["score"],
+                    "recommendation_score": c["recommendation_score"],
+                    "overall_score": c["overall_score"],
+                    "exact_matches": c["exact_matches"],
+                    "related_matches": c["related_matches"],
+                    "missing_required": c["missing_required"]
+                }
+                for idx, c in enumerate(enhanced_candidates)
+            ]
+        }
+
+        # Cache the result (10 minutes)
+        cache_service.set(cache_key, result_data, ttl=600)
+        logger.info(f"✅ Cached result for {cache_key}")
+
         return {
             "status": "success",
-            "data": {
-                "job_id": str(job_id),
-                "job_title": job.title,
-                "total_candidates_evaluated": len(top_candidates),
-                "candidates": [
-                    {
-                        "rank": idx + 1,
-                        "candidate_id": c["candidate_id"],
-                        "name": c["name"],
-                        "email": c["email"],
-                        "current_title": c.get("current_title", ""),
-                        "experience_years": c.get("experience_years", 0),
-                        "skills_match_score": c["score"],
-                        "recommendation_score": c["recommendation_score"],
-                        "overall_score": c["overall_score"],
-                        "exact_matches": c["exact_matches"],
-                        "related_matches": c["related_matches"],
-                        "missing_required": c["missing_required"]
-                    }
-                    for idx, c in enumerate(enhanced_candidates)
-                ]
-            }
+            "data": result_data,
+            "source": "computed"
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error ranking candidates: {e}")
+        cache_metrics.record_error()
         raise HTTPException(status_code=500, detail=f"Ranking error: {str(e)}")
 
 
@@ -298,6 +345,20 @@ async def analyze_skills_gaps(
             job_id = uuid.UUID(job_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+        # Check cache first
+        cache_key = f"gaps:{candidate_id}:{job_id}"
+        cached_result = cache_service.get(cache_key)
+        if cached_result:
+            logger.info(f"✅ Cache HIT for {cache_key}")
+            cache_metrics.record_hit()
+            return {
+                "status": "success",
+                "data": cached_result,
+                "source": "cache"
+            }
+
+        cache_metrics.record_miss()
 
         # Get candidate and job
         candidate = db.query(Candidate).filter(
@@ -359,33 +420,70 @@ async def analyze_skills_gaps(
         total_required = len(match_result.exact_matches) + len(match_result.missing_required)
         readiness = (len(match_result.exact_matches) / total_required * 100) if total_required > 0 else 0
 
+        result_data = {
+            "candidate_id": str(candidate_id),
+            "candidate_name": candidate.full_name,
+            "job_id": str(job_id),
+            "job_title": job.title,
+            "readiness_score": round(readiness, 1),
+            "recommendation_score": round(rec_score / 100.0, 3),
+            "skill_coverage": match_result.gap_analysis.get("coverage", "0%"),
+            "critical_gaps": critical_gaps,
+            "optional_gaps": optional_gaps,
+            "learning_plan": {
+                "total_estimated_hours": sum(g["estimated_learning_time_hours"] for g in critical_gaps),
+                "estimated_weeks": max(2, sum(g["estimated_learning_time_hours"] for g in critical_gaps) // 20),
+                "priority": "high" if len(critical_gaps) > 0 else "low",
+                "recommendation": (
+                    f"Candidate should focus on {', '.join(g['skill'] for g in critical_gaps[:3])} "
+                    f"before applying. Estimated {sum(g['estimated_learning_time_hours'] for g in critical_gaps)} hours of learning required."
+                    if critical_gaps else "Candidate is well-qualified for this position."
+                )
+            }
+        }
+
+        # Cache the result (5 minutes)
+        cache_service.set(cache_key, result_data, ttl=300)
+        logger.info(f"✅ Cached result for {cache_key}")
+
         return {
             "status": "success",
-            "data": {
-                "candidate_id": str(candidate_id),
-                "candidate_name": candidate.full_name,
-                "job_id": str(job_id),
-                "job_title": job.title,
-                "readiness_score": round(readiness, 1),
-                "recommendation_score": round(rec_score / 100.0, 3),
-                "skill_coverage": match_result.gap_analysis.get("coverage", "0%"),
-                "critical_gaps": critical_gaps,
-                "optional_gaps": optional_gaps,
-                "learning_plan": {
-                    "total_estimated_hours": sum(g["estimated_learning_time_hours"] for g in critical_gaps),
-                    "estimated_weeks": max(2, sum(g["estimated_learning_time_hours"] for g in critical_gaps) // 20),
-                    "priority": "high" if len(critical_gaps) > 0 else "low",
-                    "recommendation": (
-                        f"Candidate should focus on {', '.join(g['skill'] for g in critical_gaps[:3])} "
-                        f"before applying. Estimated {sum(g['estimated_learning_time_hours'] for g in critical_gaps)} hours of learning required."
-                        if critical_gaps else "Candidate is well-qualified for this position."
-                    )
-                }
-            }
+            "data": result_data,
+            "source": "computed"
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error analyzing gaps: {e}")
+        cache_metrics.record_error()
         raise HTTPException(status_code=500, detail=f"Gap analysis error: {str(e)}")
+
+
+@router.get("/cache/metrics", response_model=dict)
+async def get_cache_metrics(
+    token_payload: dict = Depends(verify_token)
+):
+    """
+    Get cache performance metrics (admin only)
+
+    Returns:
+        Cache statistics including hit rate, miss rate, and Redis info
+    """
+    try:
+        if token_payload.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+        metrics = cache_metrics.get_stats()
+        logger.info("Cache metrics retrieved")
+
+        return {
+            "status": "success",
+            "data": metrics
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving cache metrics: {e}")
+        raise HTTPException(status_code=500, detail=f"Metrics retrieval error: {str(e)}")
