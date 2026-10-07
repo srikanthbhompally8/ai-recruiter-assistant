@@ -5,11 +5,15 @@ from sqlalchemy.pool import NullPool
 from app.config import settings
 
 # Database Engine
+import logging
+
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
 engine = create_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_pre_ping=True,
-    poolclass=NullPool if settings.ENVIRONMENT == "production" else None,
+    DATABASE_URL,
+    echo=True,
+    pool_pre_ping=True
 )
 
 # Session Factory
