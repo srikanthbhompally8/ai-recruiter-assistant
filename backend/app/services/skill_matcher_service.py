@@ -470,28 +470,38 @@ class SkillMatcherService:
                 logger.warning(f"Job {job_id} not found")
                 return []
 
-            candidates = self.db.query(Candidate).all()
+            batch_size = 100
+            offset = 0
             rankings = []
 
-            for candidate in candidates:
-                match_result = self.match_skills(candidate, job)
-                normalized_score = match_result.skills_match_score / 100.0
+            while True:
+                candidates = self.db.query(Candidate).limit(batch_size).offset(offset).all()
 
-                if normalized_score >= min_score:
-                    rankings.append({
-                        "candidate_id": str(candidate.id),
-                        "name": candidate.full_name,
-                        "email": candidate.email,
-                        "score": round(normalized_score, 3),
-                        "exact_matches": len(match_result.exact_matches),
-                        "related_matches": len(match_result.related_matches),
-                        "missing_required": len(match_result.missing_required),
-                        "gap_analysis": match_result.gap_analysis
-                    })
+                if not candidates:
+                    break
 
-            # Sort by score descending
+                for candidate in candidates:
+                    match_result = self.match_skills(candidate, job)
+                    normalized_score = match_result.skills_match_score / 100.0
+
+                    if normalized_score >= min_score:
+                        rankings.append({
+                            "candidate_id": str(candidate.id),
+                            "name": candidate.full_name,
+                            "email": candidate.email,
+                            "score": round(normalized_score, 3),
+                            "exact_matches": len(match_result.exact_matches),
+                            "related_matches": len(match_result.related_matches),
+                            "missing_required": len(match_result.missing_required),
+                            "gap_analysis": match_result.gap_analysis
+                        })
+
+                if len(rankings) >= limit * 2:
+                    break
+
+                offset += batch_size
+
             rankings.sort(key=lambda x: x["score"], reverse=True)
-
             return rankings[:limit]
 
         except Exception as e:

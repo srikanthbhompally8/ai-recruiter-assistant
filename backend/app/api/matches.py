@@ -40,7 +40,9 @@ async def get_job_matches(
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
 
-        query = db.query(Match).filter(Match.job_id == job_id)
+        query = db.query(Match, Candidate).join(
+            Candidate, Match.candidate_id == Candidate.id
+        ).filter(Match.job_id == job_id)
 
         if min_score is not None:
             query = query.filter(Match.overall_score >= min_score)
@@ -48,16 +50,15 @@ async def get_job_matches(
         if recommendation:
             query = query.filter(Match.recommendation == recommendation)
 
-        matches = query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
+        matches_data = query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
 
         result = []
-        for match in matches:
-            candidate = db.query(Candidate).filter(Candidate.id == match.candidate_id).first()
+        for match, candidate in matches_data:
             result.append({
                 "match_id": str(match.id),
                 "candidate_id": str(match.candidate_id),
-                "candidate_name": candidate.full_name if candidate else "Unknown",
-                "candidate_email": candidate.email if candidate else None,
+                "candidate_name": candidate.full_name,
+                "candidate_email": candidate.email,
                 "skills_match": float(match.skills_match) if match.skills_match else 0,
                 "experience_match": float(match.experience_match) if match.experience_match else 0,
                 "overall_score": float(match.overall_score) if match.overall_score else 0,
