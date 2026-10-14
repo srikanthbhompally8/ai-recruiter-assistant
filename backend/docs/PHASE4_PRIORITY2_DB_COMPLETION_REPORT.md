@@ -11,7 +11,7 @@
 ## Daily status fields
 
 - **Completed:** Priority 2 Objectives 1–5 measured and finished (indexes, N+1 fixes, pagination, pool sweep, regression). Engine bugs fixed (Section 3).
-- **Testing:** 71 passed, 1 failed on the branch. Baseline on the same database: 67 passed, 5 failed (Section 5).
+- **Testing:** 72 passed, 0 failed on the branch, with a fresh test schema. Baseline on the same database: 67 passed, 5 failed (Section 5).
 - **Blockers:** none for the changes. One pre-existing test defect (Section 5.2) and a shared dev database (Section 6).
 - **Next day:** review the uncommitted diff; decide on the consolidated `database.py`/`config/database.py` engines; run the benchmark on the target environment (not this workstation); add `pg_stat_statements` to observe production query shapes.
 
@@ -27,7 +27,7 @@
 | Candidate ranking page at deep offset (100 rows, offset 99,800) | OFFSET → keyset: **9.76 ms → 0.80 ms (−91.8%)** |
 | Connection pool | Sweep (2 runs): throughput flat above ~50 workers; pool size 5 worst at 100 workers. **Defaults kept** (20 + 40 overflow). |
 | Engine and monitor defects | 4 fixed (Section 3) |
-| Regression | 71 passed, 1 failed (pre-existing, Section 5.2). Baseline: 67 passed, 5 failed. |
+| Regression | 72 passed, 0 failed, on a fresh test schema (Section 5). Baseline: 67 passed, 5 failed. |
 
 ---
 
@@ -126,9 +126,9 @@ DEBUG=false python -m pytest tests test_recommendation_scoring.py test_skill_mat
 
 The baseline failures are `test_register_duplicate_email`, `test_login_inactive_user`, `test_cannot_demote_last_admin`, `test_cannot_disable_last_active_admin` and `test_invalid_email_format`. The first four come from the engine bug in Section 3.1.
 
-### 5.2 Remaining failure (pre-existing, not caused by this work)
+### 5.2 Pre-existing test defect (fixed)
 
-`tests/test_auth_failures.py::TestDataValidationFailures::test_invalid_email_format` fails on the baseline too. Its assertion is wrong: `"@example.com"` has one `@` and a non-empty domain, so the check accepts it instead of rejecting it. The test should call the actual email validation, not this expression. Not changed here.
+`tests/test_auth_failures.py::TestDataValidationFailures::test_invalid_email_format` failed on the baseline too. Its assertion was wrong: `"@example.com"` has one `@` and a non-empty domain, so the check accepted it instead of rejecting it. The test now calls `UserRegister` (the registration schema, which uses `EmailStr`) and expects a `ValidationError` for each invalid address.
 
 ### 5.3 Not run
 
@@ -149,12 +149,13 @@ The top-level `test_*.py` scripts that need a live server (`test_phase2_*`, `tes
 ## 7. Open items
 
 1. **Skills matching on `candidates.skills` (TEXT):** substring and set matching cannot use a B-tree index. Options: a normalized `candidate_skills` table, or a trigram (`pg_trgm`) GIN index. Needs a design decision and its own benchmark.
-2. **Migrations:** the new `ix_matches_job_score` index is in the ORM model, so new databases get it from `create_all`. Existing databases need `scripts/perf/apply_indexes.py`. The repo has an `alembic/` directory; the index should be added as a migration there.
+2. **Migrations (done for the index; blocker found):** migration `003` adds `ix_matches_job_score`, and the round trip is verified. A full `alembic upgrade head` fails on a machine without the `pgvector` extension, because `002_skill_taxonomy` runs `CREATE EXTENSION vector`. That affects any fresh database on a PostgreSQL install without pgvector. Install pgvector on the target database, or make `002` optional, before running the full chain.
 3. **Single engine confirmed:** `app/database.py` is the only engine in `app/`. Only the pool sweep script creates its own, on purpose. No action needed.
 4. **`get_top_candidates_for_job` memory:** `.all()` over all candidates. Consider `yield_per`.
 5. **Run the benchmark on the target environment** (`scripts/perf/benchmark_queries.py`, `scripts/perf/pool_tuning.py`) and re-decide the pool size there.
 6. **Observe real traffic:** enable `pg_stat_statements` before the next round of index changes.
-7. **Fix the `test_invalid_email_format` assertion** (Section 5.2).
+7. **Test isolation:** `test_auth_failures.py` inserts fixed emails and never removes them, so a second run on the same schema fails (`ix_users_email` duplicate). Fixed for this run by resetting the test schema. Each test should clean up, or use a transaction rolled back after the test.
+8. **Test defect fixed:** `test_invalid_email_format` now uses the real `EmailStr` validation (Section 5.2).
 
 ---
 
@@ -167,6 +168,11 @@ The top-level `test_*.py` scripts that need a live server (`test_phase2_*`, `tes
 - `backend/app/services/recommendation_service.py` — preloaded candidate/job rows (N+1); UUID normalization
 - `backend/app/services/skill_matcher_service.py` — keyset pagination for ranking
 - `backend/app/utils/pool_monitor.py` — remove invalid event; track overflow from pool state
+
+**Follow-up (same day)**
+- `backend/alembic/versions/003_matches_job_score_index.py` — migration for `ix_matches_job_score`. Round trip verified: upgrade creates the index, downgrade drops it, re-upgrade restores it.
+- `backend/alembic/env.py` — escape `%` in the database URL before Alembic reads it. Without this, any URL-encoded password breaks migrations.
+- `backend/tests/test_auth_failures.py::test_invalid_email_format` — now checks the registration schema's `EmailStr` validation instead of an expression that accepted `@example.com`.
 
 **New**
 - `backend/scripts/perf/seed_perf_data.py` — deterministic seed (users, candidates, jobs, matches)
