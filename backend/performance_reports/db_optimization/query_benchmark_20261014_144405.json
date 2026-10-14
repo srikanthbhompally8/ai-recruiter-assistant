@@ -1,0 +1,86 @@
+{
+  "generated_at": "20261014_144405",
+  "runs": 30,
+  "sample": 500,
+  "row_counts": {
+    "users": 1000,
+    "candidates": 100000,
+    "job_descriptions": 10000,
+    "matches": 400000
+  },
+  "baseline_indexes": [
+    "candidates_pkey",
+    "ix_candidates_email",
+    "ix_candidates_status",
+    "ix_job_descriptions_status",
+    "ix_matches_candidate_job",
+    "job_descriptions_pkey",
+    "matches_pkey"
+  ],
+  "index_candidates": {
+    "baseline": {
+      "job_matches_top20": {
+        "median_ms": 38.253,
+        "plan": {
+          "node": "Limit",
+          "execution_ms": 35.747,
+          "planning_ms": 0.2,
+          "shared_hit_blocks": 7089,
+          "shared_read_blocks": 0
+        }
+      }
+    },
+    "individual": {
+      "ix_matches_job_score": {
+        "target": "job_matches_top20",
+        "baseline_ms": 38.253,
+        "with_index_ms": 0.457,
+        "improvement_pct": 98.8,
+        "plan": {
+          "node": "Limit",
+          "execution_ms": 0.08,
+          "planning_ms": 0.102,
+          "shared_hit_blocks": 103,
+          "shared_read_blocks": 0
+        }
+      },
+      "ix_matches_job_id": {
+        "target": "job_matches_top20",
+        "baseline_ms": 38.253,
+        "with_index_ms": 0.545,
+        "improvement_pct": 98.6,
+        "plan": {
+          "node": "Limit",
+          "execution_ms": 0.162,
+          "planning_ms": 0.109,
+          "shared_hit_blocks": 203,
+          "shared_read_blocks": 0
+        }
+      }
+    },
+    "baseline_indexes": null
+  },
+  "n_plus_1_candidate_matches": {
+    "before_ms": 2.906,
+    "after_ms": 1.166,
+    "improvement_pct": 59.9,
+    "queries_before": "1 + matches_per_candidate (4 in seed data)",
+    "queries_after": 1
+  },
+  "n_plus_1_recommendation": {
+    "sample_candidates": 500,
+    "before_total_s": 0.523,
+    "after_total_s": 0.263,
+    "before_ms_per_candidate": 1.046,
+    "after_ms_per_candidate": 0.527,
+    "improvement_pct": 49.6,
+    "scores_identical": true
+  },
+  "ranking_pagination": {
+    "page_size": 100,
+    "deep_offset": 99800,
+    "offset_median_ms": 9.756,
+    "keyset_median_ms": 0.796,
+    "improvement_pct": 91.8
+  }
+}

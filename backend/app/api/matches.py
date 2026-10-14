@@ -109,16 +109,20 @@ async def get_candidate_matches(
         if not candidate:
             raise HTTPException(status_code=404, detail="Candidate not found")
 
-        query = db.query(Match).filter(Match.candidate_id == candidate_id)
+        # Join jobs in the same query (was one extra query per match: N+1)
+        query = (
+            db.query(Match, JobDescription)
+            .outerjoin(JobDescription, JobDescription.id == Match.job_id)
+            .filter(Match.candidate_id == candidate_id)
+        )
 
         if min_score is not None:
             query = query.filter(Match.overall_score >= min_score)
 
-        matches = query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
+        rows = query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
 
         result = []
-        for match in matches:
-            job = db.query(JobDescription).filter(JobDescription.id == match.job_id).first()
+        for match, job in rows:
             result.append({
                 "match_id": str(match.id),
                 "job_id": str(match.job_id),

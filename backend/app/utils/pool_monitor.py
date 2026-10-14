@@ -36,6 +36,11 @@ class PoolMonitor:
         @event.listens_for(engine, "checkout")
         def receive_checkout(dbapi_conn, connection_record, connection_proxy):
             self.checked_out += 1
+            # Track the peak number of overflow connections in use (valid pool state, not an event)
+            overflow = engine.pool.overflow()
+            if overflow > self.overflow_created:
+                self.overflow_created = overflow
+                logger.warning(f"Pool: Overflow connections in use: {overflow}")
             logger.debug(f"Pool: Connection checked out (active: {self.checked_out})")
 
         @event.listens_for(engine, "checkin")
@@ -44,10 +49,6 @@ class PoolMonitor:
             self.checked_out = max(0, self.checked_out - 1)
             logger.debug(f"Pool: Connection returned (active: {self.checked_out})")
 
-        @event.listens_for(Pool, "overflow")
-        def receive_overflow(dbapi_conn, connection_record):
-            self.overflow_created += 1
-            logger.warning(f"Pool: Overflow connection created (overflow: {self.overflow_created})")
 
         @event.listens_for(Pool, "close")
         def receive_close(dbapi_conn, connection_record):

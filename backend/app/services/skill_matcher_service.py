@@ -471,11 +471,16 @@ class SkillMatcherService:
                 return []
 
             batch_size = 100
-            offset = 0
+            last_id = None
             rankings = []
 
+            # Keyset pagination on the primary key: deterministic order, and each page
+            # costs the same regardless of position (OFFSET cost grows with the page number)
             while True:
-                candidates = self.db.query(Candidate).limit(batch_size).offset(offset).all()
+                query = self.db.query(Candidate).order_by(Candidate.id)
+                if last_id is not None:
+                    query = query.filter(Candidate.id > last_id)
+                candidates = query.limit(batch_size).all()
 
                 if not candidates:
                     break
@@ -499,7 +504,7 @@ class SkillMatcherService:
                 if len(rankings) >= limit * 2:
                     break
 
-                offset += batch_size
+                last_id = candidates[-1].id
 
             rankings.sort(key=lambda x: x["score"], reverse=True)
             return rankings[:limit]

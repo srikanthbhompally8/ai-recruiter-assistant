@@ -1,5 +1,5 @@
 """Match Model"""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Numeric, Index, JSON
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Numeric, Index, JSON, desc
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
@@ -35,6 +35,8 @@ class Match(Base):
 
     __table_args__ = (
         Index('ix_matches_candidate_job', 'candidate_id', 'job_id', unique=True),
+        # Job's match list: WHERE job_id = ? ORDER BY overall_score DESC LIMIT n
+        Index('ix_matches_job_score', 'job_id', desc('overall_score')),
     )
 
     def __repr__(self):

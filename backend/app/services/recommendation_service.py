@@ -9,6 +9,7 @@ Implements weighted scoring model for matching candidates to jobs using:
 """
 
 import logging
+import uuid
 from typing import List, Dict, Optional, Tuple
 from decimal import Decimal
 import json
@@ -67,10 +68,16 @@ class RecommendationService:
     def calculate_recommendation_score(
         self,
         candidate_id: str,
-        job_id: str
+        job_id: str,
+        candidate: Optional[Candidate] = None,
+        job: Optional[JobDescription] = None,
     ) -> Tuple[float, Dict[str, float]]:
         """
         Calculate final recommendation score between candidate and job.
+
+        Pass `candidate` and/or `job` when the caller already has the rows loaded.
+        Without them, each call runs its own lookup, which is an N+1 pattern when
+        scoring many candidates against one job.
 
         Returns:
             Tuple of (final_score: 0-100, score_breakdown: dict)
@@ -99,14 +106,16 @@ class RecommendationService:
                 except:
                     pass
 
-            # Get candidate and job from database
-            candidate = self.db.query(Candidate).filter(
-                Candidate.id == candidate_id
-            ).first()
+            # Load only the rows the caller did not already provide
+            if candidate is None:
+                candidate = self.db.query(Candidate).filter(
+                    Candidate.id == candidate_id
+                ).first()
 
-            job = self.db.query(JobDescription).filter(
-                JobDescription.id == job_id
-            ).first()
+            if job is None:
+                job = self.db.query(JobDescription).filter(
+                    JobDescription.id == job_id
+                ).first()
 
             if not candidate or not job:
                 logger.warning(f"Candidate {candidate_id} or Job {job_id} not found")
@@ -366,13 +375,23 @@ class RecommendationService:
             List of dicts with candidate info and scores, sorted by score descending
         """
         try:
+            # Load the job once; each candidate is scored against it without re-querying
+            job_uuid = job_id if isinstance(job_id, uuid.UUID) else uuid.UUID(str(job_id))
+            job = self.db.query(JobDescription).filter(
+                JobDescription.id == job_uuid
+            ).first()
+            if not job:
+                return []
+
             candidates = self.db.query(Candidate).all()
             recommendations = []
 
             for candidate in candidates:
                 score, breakdown = self.calculate_recommendation_score(
                     str(candidate.id),
-                    job_id
+                    job_id,
+                    candidate=candidate,
+                    job=job,
                 )
 
                 # Normalize score to 0-1
@@ -412,6 +431,14 @@ class RecommendationService:
             List of dicts with job info and scores, sorted by score descending
         """
         try:
+            # Load the candidate once; each open job is scored without re-querying
+            candidate_uuid = candidate_id if isinstance(candidate_id, uuid.UUID) else uuid.UUID(str(candidate_id))
+            candidate = self.db.query(Candidate).filter(
+                Candidate.id == candidate_uuid
+            ).first()
+            if not candidate:
+                return []
+
             jobs = self.db.query(JobDescription).filter(
                 JobDescription.status == "open"
             ).all()
@@ -421,7 +448,9 @@ class RecommendationService:
             for job in jobs:
                 score, breakdown = self.calculate_recommendation_score(
                     candidate_id,
-                    str(job.id)
+                    str(job.id),
+                    candidate=candidate,
+                    job=job,
                 )
 
                 # Normalize score to 0-1

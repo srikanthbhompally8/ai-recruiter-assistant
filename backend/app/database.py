@@ -14,19 +14,33 @@ ENABLE_QUERY_LOGGING = settings.DEBUG and settings.ENVIRONMENT == "development"
 if ENABLE_QUERY_LOGGING:
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=20,              # Default connections to maintain
-    max_overflow=40,           # Max connections beyond pool_size
-    pool_recycle=3600,         # Recycle connections after 1 hour
-    pool_pre_ping=True,        # Test connections before use
-    echo=ENABLE_QUERY_LOGGING, # Only log queries in dev mode
-    connect_args={
-        'timeout': 30,         # Connection timeout in seconds
-        'check_same_thread': False  # SQLite specific (if used)
-    }
-)
+def _build_engine():
+    """Create the engine with dialect-appropriate options.
+
+    PostgreSQL uses a pooled connection (pool sizes from settings).
+    SQLite (local dev) does not support the pool arguments or the psycopg2
+    connect options, so it is configured separately.
+    """
+    if settings.DATABASE_URL.startswith("sqlite"):
+        return create_engine(
+            settings.DATABASE_URL,
+            echo=ENABLE_QUERY_LOGGING,
+            connect_args={"check_same_thread": False},
+        )
+
+    return create_engine(
+        settings.DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=settings.DB_POOL_SIZE,
+        max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_recycle=settings.DB_POOL_RECYCLE,
+        pool_pre_ping=settings.DB_POOL_PRE_PING,
+        echo=ENABLE_QUERY_LOGGING,
+        connect_args={"connect_timeout": settings.DB_CONNECTION_TIMEOUT},
+    )
+
+
+engine = _build_engine()
 
 # Initialize pool monitoring
 try:

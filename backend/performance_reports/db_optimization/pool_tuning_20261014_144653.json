@@ -1,0 +1,126 @@
+{
+  "generated_at": "20261014_144653",
+  "duration_s": 10.0,
+  "results": [
+    {
+      "pool_size": 5,
+      "max_overflow": 40,
+      "concurrency": 10,
+      "completed": 30312,
+      "errors": 0,
+      "throughput_per_s": 3031.2,
+      "p50_ms": 3.11,
+      "p95_ms": 5.2
+    },
+    {
+      "pool_size": 10,
+      "max_overflow": 40,
+      "concurrency": 10,
+      "completed": 22058,
+      "errors": 0,
+      "throughput_per_s": 2205.8,
+      "p50_ms": 4.33,
+      "p95_ms": 6.83
+    },
+    {
+      "pool_size": 20,
+      "max_overflow": 40,
+      "concurrency": 10,
+      "completed": 24035,
+      "errors": 0,
+      "throughput_per_s": 2403.5,
+      "p50_ms": 3.87,
+      "p95_ms": 6.82
+    },
+    {
+      "pool_size": 40,
+      "max_overflow": 40,
+      "concurrency": 10,
+      "completed": 27815,
+      "errors": 0,
+      "throughput_per_s": 2781.5,
+      "p50_ms": 3.44,
+      "p95_ms": 5.43
+    },
+    {
+      "pool_size": 5,
+      "max_overflow": 40,
+      "concurrency": 50,
+      "completed": 22505,
+      "errors": 0,
+      "throughput_per_s": 2250.5,
+      "p50_ms": 17.45,
+      "p95_ms": 32.11
+    },
+    {
+      "pool_size": 10,
+      "max_overflow": 40,
+      "concurrency": 50,
+      "completed": 23730,
+      "errors": 0,
+      "throughput_per_s": 2373.0,
+      "p50_ms": 18.81,
+      "p95_ms": 35.18
+    },
+    {
+      "pool_size": 20,
+      "max_overflow": 40,
+      "concurrency": 50,
+      "completed": 24208,
+      "errors": 0,
+      "throughput_per_s": 2420.8,
+      "p50_ms": 18.59,
+      "p95_ms": 33.61
+    },
+    {
+      "pool_size": 40,
+      "max_overflow": 40,
+      "concurrency": 50,
+      "completed": 24287,
+      "errors": 0,
+      "throughput_per_s": 2428.7,
+      "p50_ms": 18.43,
+      "p95_ms": 34.17
+    },
+    {
+      "pool_size": 5,
+      "max_overflow": 40,
+      "concurrency": 100,
+      "completed": 17782,
+      "errors": 0,
+      "throughput_per_s": 1778.2,
+      "p50_ms": 25.64,
+      "p95_ms": 119.82
+    },
+    {
+      "pool_size": 10,
+      "max_overflow": 40,
+      "concurrency": 100,
+      "completed": 23067,
+      "errors": 0,
+      "throughput_per_s": 2306.7,
+      "p50_ms": 19.57,
+      "p95_ms": 35.72
+    },
+    {
+      "pool_size": 20,
+      "max_overflow": 40,
+      "concurrency": 100,
+      "completed": 21568,
+      "errors": 0,
+      "throughput_per_s": 2156.8,
+      "p50_ms": 24.78,
+      "p95_ms": 47.26
+    },
+    {
+      "pool_size": 40,
+      "max_overflow": 40,
+      "concurrency": 100,
+      "completed": 20411,
+      "errors": 0,
+      "throughput_per_s": 2041.1,
+      "p50_ms": 40.93,
+      "p95_ms": 70.91
+    }
+  ]
+}
