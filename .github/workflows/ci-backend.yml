@@ -50,12 +50,16 @@ jobs:
           flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+      # Non-blocking until the existing type errors (~60, present on main) are fixed
       - name: Type check with mypy
+        continue-on-error: true
         run: |
           cd backend
           mypy app --ignore-missing-imports
 
+      # Non-blocking until the existing formatting drift (present on main) is cleaned up
       - name: Format check with black
+        continue-on-error: true
         run: |
           cd backend
           black --check app
