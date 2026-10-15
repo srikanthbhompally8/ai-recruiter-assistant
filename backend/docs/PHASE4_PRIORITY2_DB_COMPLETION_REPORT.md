@@ -40,7 +40,7 @@ Candidates tried, each alone on top of a baseline with no candidate indexes (`pe
 | Index | Target | Baseline | With index | Decision |
 |---|---|---|---|---|
 | `ix_matches_job_score` `(job_id, overall_score DESC)` | Job match list | 38.25 ms | 0.46 ms (−98.8%) | **Accepted**, added to `Match` model |
-| `ix_matches_job_id` `(job_id)` | Job match list | 38.25 ms | 0.55 ms (−98.6%) | Rejected: redundant (prefix of the accepted index, and its plan needs a separate sort) |
+| `ix_matches_job_id` `(job_id)` | Job match list | 38.25 ms | 0.55 ms (−98.6%) | Rejected: a prefix of the accepted index, which gives a slightly faster plan (0.08 ms vs 0.16 ms execution) and avoids the separate sort on `overall_score` |
 
 Plan for the accepted index: `Limit` → `Index Scan` on `ix_matches_job_score`, 0.08 ms execution. Before: sequential scan of 400k matches (35.7 ms, 7,089 buffer hits).
 
@@ -94,7 +94,7 @@ Reading:
 
 ## 3. Defects fixed
 
-1. **The app could not connect to PostgreSQL at all.** `app/database.py` passed `connect_args={'timeout': 30, 'check_same_thread': False}` to every engine. psycopg2 rejects both options (`invalid connection option "timeout"`), so every database call failed. Fixed: PostgreSQL uses `connect_timeout` from settings; SQLite keeps its own branch. This also caused 4 of the 5 baseline auth test failures.
+1. **The app could not connect to PostgreSQL at all.** `app/database.py` passed `connect_args={'timeout': 30, 'check_same_thread': False}` to every engine. psycopg2 rejects both options (`invalid connection option "timeout"`), so every database call failed. Fixed: PostgreSQL uses `connect_timeout` from settings; SQLite keeps its own branch. The baseline test run logged this error seven times, and the four database-backed auth failures are consistent with it.
 2. **Pool settings were hardcoded.** `pool_size=20` and `max_overflow=40` were fixed in `database.py`, and `DB_POOL_SIZE`/`DB_MAX_OVERFLOW` in `config.py` were never read. Now read from settings.
 3. **Pool monitor never fully started.** It registered a listener for a `"overflow"` pool event that SQLAlchemy does not provide. The error was caught and logged as a warning, but it stopped the listener setup after the failing line. Replaced with a check of `engine.pool.overflow()` on checkout, which records the peak overflow.
 4. **Recommendation scoring used the wrong ID type for lookups.** This was introduced during this work and caught by the test suite; fixed by normalizing IDs to `uuid.UUID` before the lookup.
@@ -124,7 +124,7 @@ DEBUG=false python -m pytest tests test_recommendation_scoring.py test_skill_mat
 | Passed | 67 | **71** |
 | Failed | 5 | **1** |
 
-The baseline failures are `test_register_duplicate_email`, `test_login_inactive_user`, `test_cannot_demote_last_admin`, `test_cannot_disable_last_active_admin` and `test_invalid_email_format`. The first four come from the engine bug in Section 3.1.
+The baseline failures are `test_register_duplicate_email`, `test_login_inactive_user`, `test_cannot_demote_last_admin`, `test_cannot_disable_last_active_admin` and `test_invalid_email_format`. The first four are consistent with the engine bug in Section 3.1 (the baseline log shows that error seven times).
 
 ### 5.2 Pre-existing test defect (fixed)
 
