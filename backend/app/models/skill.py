@@ -1,5 +1,5 @@
 """Skill Taxonomy Model"""
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ARRAY
+from sqlalchemy import Column, String, Text, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
@@ -14,7 +14,7 @@ class SkillTaxonomy(Base):
     category = Column(String(100), nullable=False, index=True)
     subcategory = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
-    proficiency_levels = Column(ARRAY(String), nullable=True)
+    proficiency_levels = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

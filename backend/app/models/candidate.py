@@ -1,6 +1,6 @@
 """Candidate Model"""
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, ARRAY, JSON
-from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 from datetime import datetime
@@ -17,13 +17,13 @@ class Candidate(Base):
     full_name = Column(String(255), nullable=False)
 
     # Parsed profile data
-    skills = Column(ARRAY(String), nullable=True)
+    skills = Column(Text, nullable=True)
     experience_years = Column(Integer, nullable=True)
     current_title = Column(String(255), nullable=True)
     current_company = Column(String(255), nullable=True)
 
     # Structured data
-    profile_json = Column(JSONB, nullable=True)
+    profile_json = Column(JSON, nullable=True)
 
     # File references
     resume_file_path = Column(String(512), nullable=True)

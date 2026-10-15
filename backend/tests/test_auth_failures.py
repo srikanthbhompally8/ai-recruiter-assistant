@@ -230,8 +230,10 @@ class TestDataValidationFailures:
     """Test data validation failures"""
 
     def test_invalid_email_format(self):
-        """Failure: Register with invalid email"""
-        # Pydantic should reject this
+        """Failure: Register with invalid email is rejected by the registration schema"""
+        from pydantic import ValidationError
+        from app.schemas.auth import UserRegister
+
         invalid_emails = [
             "notanemail",
             "@example.com",
@@ -240,10 +242,11 @@ class TestDataValidationFailures:
         ]
 
         for email in invalid_emails:
-            # In FastAPI, Pydantic would validate and reject
-            # This is handled at the schema level
-            assert "@" not in email or email.count("@") > 1 or not email.split("@")[1], \
-                f"Should reject invalid email: {email}"
+            with pytest.raises(ValidationError, match="email"):
+                UserRegister(email=email, password="SecurePassword123!")
+
+        # Sanity check: the validator accepts a well-formed address
+        assert UserRegister(email="user@example.com", password="SecurePassword123!").email == "user@example.com"
 
     def test_invalid_role_format(self):
         """Failure: Update user with invalid role"""
