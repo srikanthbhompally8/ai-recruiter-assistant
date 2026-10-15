@@ -50,9 +50,6 @@ python-dateutil==2.8.2
 # Logging & Monitoring
 python-json-logger==2.0.7
 
-# CORS
-python-cors==1.0.1
-
 # Data Processing
 numpy==1.24.3
 pandas==2.1.3
