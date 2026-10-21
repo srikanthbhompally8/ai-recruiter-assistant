@@ -192,3 +192,53 @@ DEBUG=false python -m scripts.perf.benchmark_queries --runs 30 --sample 500
 DEBUG=false python -m scripts.perf.pool_tuning --duration 10
 DEBUG=false python -m pytest tests test_recommendation_scoring.py test_skill_matching.py -q
 ```
+
+---
+
+## 10. Final verification (2026-10-20)
+
+Environment: PostgreSQL 16.15 with pgvector, in a Docker container on the same workstation (`localhost:5433`). This is not the target production hardware, and the results are labelled accordingly. Source: `backend/performance_reports/db_optimization/query_benchmark_20261020_195931.json` and `pool_tuning_20261020_195951.json`.
+
+### Migrations
+- `alembic upgrade head` on a fresh schema: passes (001 through 004).
+- `alembic check` against the ORM models: no drift. The models were aligned to the migrated schema (see section 3.1 below).
+- Downgrade to base and re-upgrade: passes.
+
+### CI
+- Pull request #1 merged into `main`. Backend CI `test` job green on commit `6923768` (1 minute). The `build` job is skipped on pull requests by design.
+- mypy and black are blocking again, and pass with the CI-pinned versions (mypy 1.7.1, black 23.12.0).
+
+### Query benchmark (30 runs per query, medians)
+
+| Path | Before | After | Change |
+|---|---|---|---|
+| Job match list (`ix_matches_job_score`) | 15.36 ms (plan 14.52 ms) | 0.83 ms (plan 0.15 ms) | -94.6% |
+| Job match list (`ix_matches_job_id`, tested alone) | 15.36 ms | 0.75 ms (plan 0.19 ms) | -95.2% |
+| Candidate match list (N+1 removed) | 5.71 ms (5 queries) | 2.62 ms (1 query) | -54.2% |
+| Recommendation scoring, 500 candidates | 2.06 ms per candidate | 1.65 ms per candidate | -20.0% (scores identical) |
+| Ranking page at deep offset (99,800) | 35.36 ms (OFFSET) | 0.79 ms (keyset) | -97.8% |
+
+Notes:
+- Both job-list indexes give about 95%. The composite index `(job_id, overall_score DESC)` is kept because its plan is faster (0.15 vs 0.19 ms) and it returns rows already sorted. The plain `job_id` index has a slightly lower wall-clock median in this run.
+- The recommendation gain is smaller here (20%) than on the workstation run (49.6%, section 2.2). Both runs are reported. The per-candidate cost is dominated by scoring work, so the lookup savings depend on the environment.
+
+### Connection pool sweep (10 s per configuration)
+
+| Concurrency | Pool 5 | Pool 10 | Pool 20 | Pool 40 |
+|---|---|---|---|---|
+| 10 workers, p95 | 8.18 ms | 8.16 ms | 8.36 ms | 10.96 ms |
+| 50 workers, p95 | 55.72 ms | 54.81 ms | 54.44 ms | 54.64 ms |
+| 100 workers, p95 | 61.25 ms | 71.70 ms | 88.91 ms | 119.17 ms |
+| 100 workers, throughput | 1,237 req/s | 1,188 req/s | 1,160 req/s | 1,162 req/s |
+
+Reading: at 10 and 50 workers the pool sizes are within noise. At 100 workers, the smallest pool gives the best p95 in this environment. This is the opposite of the workstation run (section 3), so the best pool size depends on the environment. **The current defaults (20 + 40 overflow) are not supported as optimal by this run.** Do not change them until the sweep is repeated on the target hardware.
+
+### 3.1 Schema alignment (new)
+Migrations and models had drifted: skill lists were PostgreSQL arrays in the migrations but text in the models, and nullability and JSON types also differed. This caused the CI failures before the fix. Migration `004_align_schema` converts the six array columns to text (preserving values with `array_to_string`) and replaces redundant unique constraints with the unique indexes the models declare. Models were updated to match the database's `NOT NULL` rules and JSONB type. `CandidateSkill` and `JobSkill` models were added for the junction tables used by the skills-matching design.
+
+### Remaining limitations
+- Benchmarks ran on a single workstation with a Docker container. Repeat them on target hardware before drawing production conclusions, including the pool size.
+- The skills-matching design (`docs/SKILLS_MATCHING_DESIGN.md`) is not implemented. Its open decisions are the embedding provider, the evaluation set, and taxonomy ownership.
+- The test suite passes on a fresh schema. Some tests still depend on a clean database; the auth tests now use unique emails per run.
+- Migration `002` requires the `pgvector` extension.
+- No resource-utilization measurements (CPU, I/O) were captured, only buffer counts from `EXPLAIN`.

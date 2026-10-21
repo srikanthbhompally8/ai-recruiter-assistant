@@ -1,0 +1,104 @@
+{
+  "generated_at": "20261020_195931",
+  "runs": 30,
+  "sample": 500,
+  "row_counts": {
+    "users": 1000,
+    "candidates": 100000,
+    "job_descriptions": 10000,
+    "matches": 400000
+  },
+  "baseline_indexes": [
+    "candidates_email_key",
+    "candidates_pkey",
+    "candidates_pkey",
+    "candidates_pkey",
+    "ix_candidates_email",
+    "ix_candidates_email",
+    "ix_candidates_email",
+    "ix_candidates_status",
+    "ix_candidates_status",
+    "ix_candidates_status",
+    "ix_job_descriptions_status",
+    "ix_job_descriptions_status",
+    "ix_job_descriptions_status",
+    "ix_matches_candidate_job",
+    "ix_matches_candidate_job",
+    "ix_matches_job_score",
+    "ix_matches_job_score",
+    "ix_matches_job_score",
+    "job_descriptions_pkey",
+    "job_descriptions_pkey",
+    "job_descriptions_pkey",
+    "matches_pkey",
+    "matches_pkey",
+    "matches_pkey",
+    "uq_candidate_job"
+  ],
+  "index_candidates": {
+    "baseline": {
+      "job_matches_top20": {
+        "median_ms": 15.361,
+        "plan": {
+          "node": "Limit",
+          "execution_ms": 14.52,
+          "planning_ms": 0.188,
+          "shared_hit_blocks": 7049,
+          "shared_read_blocks": 0
+        }
+      }
+    },
+    "individual": {
+      "ix_matches_job_score": {
+        "target": "job_matches_top20",
+        "baseline_ms": 15.361,
+        "with_index_ms": 0.828,
+        "improvement_pct": 94.6,
+        "plan": {
+          "node": "Limit",
+          "execution_ms": 0.152,
+          "planning_ms": 0.117,
+          "shared_hit_blocks": 103,
+          "shared_read_blocks": 0
+        }
+      },
+      "ix_matches_job_id": {
+        "target": "job_matches_top20",
+        "baseline_ms": 15.361,
+        "with_index_ms": 0.745,
+        "improvement_pct": 95.2,
+        "plan": {
+          "node": "Limit",
+          "execution_ms": 0.193,
+          "planning_ms": 0.137,
+          "shared_hit_blocks": 203,
+          "shared_read_blocks": 0
+        }
+      }
+    },
+    "baseline_indexes": null
+  },
+  "n_plus_1_candidate_matches": {
+    "before_ms": 5.713,
+    "after_ms": 2.616,
+    "improvement_pct": 54.2,
+    "queries_before": "1 + matches_per_candidate (4 in seed data)",
+    "queries_after": 1
+  },
+  "n_plus_1_recommendation": {
+    "sample_candidates": 500,
+    "before_total_s": 1.032,
+    "after_total_s": 0.825,
+    "before_ms_per_candidate": 2.064,
+    "after_ms_per_candidate": 1.65,
+    "improvement_pct": 20.0,
+    "scores_identical": true
+  },
+  "ranking_pagination": {
+    "page_size": 100,
+    "deep_offset": 99800,
+    "offset_median_ms": 35.355,
+    "keyset_median_ms": 0.786,
+    "improvement_pct": 97.8
+  }
+}
