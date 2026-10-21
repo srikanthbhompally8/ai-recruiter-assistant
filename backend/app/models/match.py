@@ -1,6 +1,17 @@
 """Match Model"""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, ARRAY, Numeric
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import (
+    Column,
+    String,
+    DateTime,
+    ForeignKey,
+    Text,
+    Numeric,
+    Index,
+    JSON,
+    desc,
+)
+from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
 import uuid
@@ -10,8 +21,12 @@ class Match(Base):
     __tablename__ = "matches"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    candidate_id = Column(UUID(as_uuid=True), ForeignKey("candidates.id"), nullable=False)
-    job_id = Column(UUID(as_uuid=True), ForeignKey("job_descriptions.id"), nullable=False)
+    candidate_id = Column(
+        UUID(as_uuid=True), ForeignKey("candidates.id"), nullable=False
+    )
+    job_id = Column(
+        UUID(as_uuid=True), ForeignKey("job_descriptions.id"), nullable=False
+    )
 
     # Match scores (0-100)
     skills_match = Column(Numeric(5, 2), nullable=True)
@@ -19,8 +34,8 @@ class Match(Base):
     overall_score = Column(Numeric(5, 2), nullable=True)
 
     # Matching details
-    matched_skills = Column(ARRAY(String), nullable=True)
-    missing_skills = Column(ARRAY(String), nullable=True)
+    matched_skills = Column(Text, nullable=True)
+    missing_skills = Column(Text, nullable=True)
     match_explanation = Column(Text, nullable=True)
     match_details_json = Column(JSONB, nullable=True)
 
@@ -28,13 +43,17 @@ class Match(Base):
     recommendation = Column(String(50), nullable=True)
 
     # Status
-    status = Column(String(50), default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String(50), default="pending", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     viewed_at = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     __table_args__ = (
-        {"indexes": [{"columns": ["candidate_id", "job_id"], "unique": True}]},
+        Index("ix_matches_candidate_job", "candidate_id", "job_id", unique=True),
+        # Job's match list: WHERE job_id = ? ORDER BY overall_score DESC LIMIT n
+        Index("ix_matches_job_score", "job_id", desc("overall_score")),
     )
 
     def __repr__(self):

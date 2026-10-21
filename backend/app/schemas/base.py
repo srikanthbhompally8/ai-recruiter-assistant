@@ -7,6 +7,7 @@ from uuid import UUID
 
 class BaseSchema(BaseModel):
     """Base schema with common fields"""
+
     id: Optional[UUID] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

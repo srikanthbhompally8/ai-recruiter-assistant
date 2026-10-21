@@ -134,7 +134,7 @@ async def refresh_token(request: RefreshTokenRequest):
 
 
 @router.get("/me", response_model=dict)
-async def get_current_user(authorization: str = None):
+async def get_current_user(authorization: str | None = None):
     """
     Get current user info from token
 

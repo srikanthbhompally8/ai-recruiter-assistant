@@ -39,7 +39,7 @@ class S3Service:
             S3 URL of uploaded file
         """
         try:
-            extra_args = {
+            extra_args: dict = {
                 "ContentType": content_type,
             }
 

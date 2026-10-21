@@ -51,11 +51,11 @@ def parse_resume_async(self, candidate_id: str, resume_text: str):
         try:
             candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
             if candidate:
-                candidate.profile_json = parsed_data
+                candidate.profile_json = parsed_data  # type: ignore[assignment]
                 candidate.skills = parsed_data.get("skills", [])
-                candidate.current_title = parsed_data.get("current_title")
-                candidate.current_company = parsed_data.get("current_company")
-                candidate.experience_years = parsed_data.get("experience_years")
+                candidate.current_title = parsed_data.get("current_title")  # type: ignore[assignment]
+                candidate.current_company = parsed_data.get("current_company")  # type: ignore[assignment]
+                candidate.experience_years = parsed_data.get("experience_years")  # type: ignore[assignment]
                 db.commit()
                 logger.info(f"Resume parsed and saved for candidate: {candidate_id}")
             else:
@@ -103,18 +103,22 @@ def calculate_matches_async(self, job_id: str):
             for candidate in candidates:
                 # Calculate match
                 match_result = matching_engine.calculate_match(
-                    candidate_skills=candidate.skills or [],
-                    job_required_skills=job.required_skills or [],
-                    job_nice_to_have_skills=job.nice_to_have_skills or [],
-                    candidate_experience=candidate.experience_years or 0,
-                    job_experience_required=job.experience_required or 0,
+                    candidate_skills=candidate.skills or [],  # type: ignore[arg-type]
+                    job_required_skills=job.required_skills or [],  # type: ignore[arg-type]
+                    job_nice_to_have_skills=job.nice_to_have_skills or [],  # type: ignore[arg-type]
+                    candidate_experience=candidate.experience_years or 0,  # type: ignore[arg-type]
+                    job_experience_required=job.experience_required or 0,  # type: ignore[arg-type]
                 )
 
                 # Check if match already exists
-                existing_match = db.query(Match).filter(
-                    Match.candidate_id == candidate.id,
-                    Match.job_id == job.id,
-                ).first()
+                existing_match = (
+                    db.query(Match)
+                    .filter(
+                        Match.candidate_id == candidate.id,
+                        Match.job_id == job.id,
+                    )
+                    .first()
+                )
 
                 if existing_match:
                     # Update existing match
@@ -128,6 +132,7 @@ def calculate_matches_async(self, job_id: str):
                 else:
                     # Create new match
                     from uuid import uuid4
+
                     match = Match(
                         id=uuid4(),
                         candidate_id=candidate.id,
@@ -144,7 +149,9 @@ def calculate_matches_async(self, job_id: str):
                     matches_created += 1
 
             db.commit()
-            logger.info(f"Match calculation complete for job {job_id}. Created/updated: {matches_created}")
+            logger.info(
+                f"Match calculation complete for job {job_id}. Created/updated: {matches_created}"
+            )
 
         finally:
             db.close()

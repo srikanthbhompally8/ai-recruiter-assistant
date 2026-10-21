@@ -23,7 +23,7 @@ class MatchingEngineService:
         self,
         candidate_skills: List[str],
         job_required_skills: List[str],
-        job_nice_to_have_skills: List[str] = None,
+        job_nice_to_have_skills: List[str] | None = None,
         candidate_experience: int = 0,
         job_experience_required: int = 0,
     ) -> Dict[str, Any]:
@@ -45,13 +45,19 @@ class MatchingEngineService:
 
             # Calculate skill matches
             matched_required = [
-                s for s in candidate_skills if s.lower() in [x.lower() for x in job_required_skills]
+                s
+                for s in candidate_skills
+                if s.lower() in [x.lower() for x in job_required_skills]
             ]
             matched_nice = [
-                s for s in candidate_skills if s.lower() in [x.lower() for x in job_nice_to_have_skills]
+                s
+                for s in candidate_skills
+                if s.lower() in [x.lower() for x in job_nice_to_have_skills]
             ]
             missing_skills = [
-                s for s in job_required_skills if s.lower() not in [x.lower() for x in candidate_skills]
+                s
+                for s in job_required_skills
+                if s.lower() not in [x.lower() for x in candidate_skills]
             ]
 
             # Calculate skills match score
@@ -65,7 +71,9 @@ class MatchingEngineService:
                 if candidate_experience >= job_experience_required:
                     experience_match = 100.0
                 else:
-                    experience_match = (candidate_experience / job_experience_required) * 100
+                    experience_match = (
+                        candidate_experience / job_experience_required
+                    ) * 100
 
             # Calculate overall score (weighted average)
             # 70% skills, 30% experience

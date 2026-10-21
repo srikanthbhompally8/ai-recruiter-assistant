@@ -1,6 +1,7 @@
 """Candidate Model"""
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, ARRAY, JSON
-from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 from datetime import datetime
@@ -17,7 +18,7 @@ class Candidate(Base):
     full_name = Column(String(255), nullable=False)
 
     # Parsed profile data
-    skills = Column(ARRAY(String), nullable=True)
+    skills = Column(Text, nullable=True)
     experience_years = Column(Integer, nullable=True)
     current_title = Column(String(255), nullable=True)
     current_company = Column(String(255), nullable=True)
@@ -30,9 +31,11 @@ class Candidate(Base):
     resume_s3_key = Column(String(512), nullable=True)
 
     # Status & metadata
-    status = Column(String(50), default="active", index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String(50), default="active", index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Search optimization (future)
     # full_text_search = Column(TSVECTOR, nullable=True)

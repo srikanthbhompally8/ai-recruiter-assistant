@@ -16,8 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      # pgvector image: migration 002 runs CREATE EXTENSION vector
       postgres:
-        image: postgres:15-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: recruiter
           POSTGRES_PASSWORD: password
@@ -29,6 +30,17 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+
+      # Cache tests assert values round-trip through Redis
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
       - uses: actions/checkout@v4
@@ -60,9 +72,18 @@ jobs:
           cd backend
           black --check app
 
+      - name: Apply Alembic migrations
+        env:
+          DATABASE_URL: postgresql://recruiter:password@localhost:5432/recruiter_db
+        run: |
+          cd backend
+          alembic -c alembic/alembic.ini upgrade head
+
       - name: Run tests with pytest
         env:
           DATABASE_URL: postgresql://recruiter:password@localhost:5432/recruiter_db
+          REDIS_HOST: localhost
+          REDIS_PORT: "6379"
         run: |
           cd backend
           pytest --cov=app --cov-report=xml

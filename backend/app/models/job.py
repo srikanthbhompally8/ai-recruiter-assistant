@@ -1,6 +1,16 @@
 """Job Description Model"""
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, ARRAY, Numeric
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import (
+    Column,
+    String,
+    Integer,
+    DateTime,
+    ForeignKey,
+    Text,
+    Numeric,
+    JSON,
+)
+from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
 import uuid
@@ -15,8 +25,8 @@ class JobDescription(Base):
     company = Column(String(255), nullable=True)
 
     # Parsed JD data
-    required_skills = Column(ARRAY(String), nullable=True)
-    nice_to_have_skills = Column(ARRAY(String), nullable=True)
+    required_skills = Column(Text, nullable=True)
+    nice_to_have_skills = Column(Text, nullable=True)
     experience_required = Column(Integer, nullable=True)
     job_type = Column(String(50), nullable=True)
     salary_min = Column(Numeric(10, 2), nullable=True)
@@ -27,9 +37,11 @@ class JobDescription(Base):
     description = Column(Text, nullable=True)
 
     # Status
-    status = Column(String(50), default="open", index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String(50), default="open", index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Search optimization (future)
     # full_text_search = Column(TSVECTOR, nullable=True)

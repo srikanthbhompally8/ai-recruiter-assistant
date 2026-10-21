@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql://recruiter:password@localhost:5432/recruiter_db"
 
+    # Connection Pool Configuration
+    DB_POOL_SIZE: int = 20  # Default connections to maintain
+    DB_MAX_OVERFLOW: int = 40  # Max additional connections
+    DB_POOL_RECYCLE: int = 3600  # Recycle connections after 1 hour
+    DB_POOL_PRE_PING: bool = True  # Test connections before use
+    DB_CONNECTION_TIMEOUT: int = 30  # Connection timeout in seconds
+
     # AWS
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""

@@ -106,7 +106,9 @@ class TestAuthenticationFailures:
 
     def test_register_duplicate_email(self):
         """Failure: Register with existing email"""
-        email = "duplicate@example.com"
+        from uuid import uuid4
+
+        email = f"duplicate-{uuid4().hex[:8]}@example.com"
         password = "Password123!"
 
         # First registration succeeds
@@ -131,12 +133,13 @@ class TestAuthenticationFailures:
         from app.models import User
         from uuid import uuid4
 
+        inactive_email = f"inactive-{uuid4().hex[:8]}@example.com"
         db = SessionLocal()
         try:
             # Create inactive user
             user = User(
                 id=uuid4(),
-                email="inactive@example.com",
+                email=inactive_email,
                 password_hash=auth_service.hash_password("Password123!"),
                 is_active=False,
             )
@@ -145,7 +148,7 @@ class TestAuthenticationFailures:
 
             # Try to login
             result = auth_service.authenticate_user(
-                "inactive@example.com",
+                inactive_email,
                 "Password123!"
             )
             assert result is None, "Should reject inactive user"
@@ -230,8 +233,10 @@ class TestDataValidationFailures:
     """Test data validation failures"""
 
     def test_invalid_email_format(self):
-        """Failure: Register with invalid email"""
-        # Pydantic should reject this
+        """Failure: Register with invalid email is rejected by the registration schema"""
+        from pydantic import ValidationError
+        from app.schemas.auth import UserRegister
+
         invalid_emails = [
             "notanemail",
             "@example.com",
@@ -240,10 +245,11 @@ class TestDataValidationFailures:
         ]
 
         for email in invalid_emails:
-            # In FastAPI, Pydantic would validate and reject
-            # This is handled at the schema level
-            assert "@" not in email or email.count("@") > 1 or not email.split("@")[1], \
-                f"Should reject invalid email: {email}"
+            with pytest.raises(ValidationError, match="email"):
+                UserRegister(email=email, password="SecurePassword123!")
+
+        # Sanity check: the validator accepts a well-formed address
+        assert UserRegister(email="user@example.com", password="SecurePassword123!").email == "user@example.com"
 
     def test_invalid_role_format(self):
         """Failure: Update user with invalid role"""

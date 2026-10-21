@@ -40,7 +40,11 @@ async def get_job_matches(
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
 
-        query = db.query(Match).filter(Match.job_id == job_id)
+        query = (
+            db.query(Match, Candidate)
+            .join(Candidate, Match.candidate_id == Candidate.id)
+            .filter(Match.job_id == job_id)
+        )
 
         if min_score is not None:
             query = query.filter(Match.overall_score >= min_score)
@@ -48,25 +52,36 @@ async def get_job_matches(
         if recommendation:
             query = query.filter(Match.recommendation == recommendation)
 
-        matches = query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
+        matches_data = (
+            query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
+        )
 
         result = []
-        for match in matches:
-            candidate = db.query(Candidate).filter(Candidate.id == match.candidate_id).first()
-            result.append({
-                "match_id": str(match.id),
-                "candidate_id": str(match.candidate_id),
-                "candidate_name": candidate.full_name if candidate else "Unknown",
-                "candidate_email": candidate.email if candidate else None,
-                "skills_match": float(match.skills_match) if match.skills_match else 0,
-                "experience_match": float(match.experience_match) if match.experience_match else 0,
-                "overall_score": float(match.overall_score) if match.overall_score else 0,
-                "matched_skills": match.matched_skills,
-                "missing_skills": match.missing_skills,
-                "recommendation": match.recommendation,
-                "status": match.status,
-                "created_at": match.created_at.isoformat() if match.created_at else None,
-            })
+        for match, candidate in matches_data:
+            result.append(
+                {
+                    "match_id": str(match.id),
+                    "candidate_id": str(match.candidate_id),
+                    "candidate_name": candidate.full_name,
+                    "candidate_email": candidate.email,
+                    "skills_match": float(match.skills_match)
+                    if match.skills_match
+                    else 0,
+                    "experience_match": float(match.experience_match)
+                    if match.experience_match
+                    else 0,
+                    "overall_score": float(match.overall_score)
+                    if match.overall_score
+                    else 0,
+                    "matched_skills": match.matched_skills,
+                    "missing_skills": match.missing_skills,
+                    "recommendation": match.recommendation,
+                    "status": match.status,
+                    "created_at": match.created_at.isoformat()
+                    if match.created_at
+                    else None,
+                }
+            )
 
         return {
             "status": "success",
@@ -108,30 +123,46 @@ async def get_candidate_matches(
         if not candidate:
             raise HTTPException(status_code=404, detail="Candidate not found")
 
-        query = db.query(Match).filter(Match.candidate_id == candidate_id)
+        # Join jobs in the same query (was one extra query per match: N+1)
+        query = (
+            db.query(Match, JobDescription)
+            .outerjoin(JobDescription, JobDescription.id == Match.job_id)
+            .filter(Match.candidate_id == candidate_id)
+        )
 
         if min_score is not None:
             query = query.filter(Match.overall_score >= min_score)
 
-        matches = query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
+        rows = (
+            query.order_by(Match.overall_score.desc()).offset(skip).limit(limit).all()
+        )
 
         result = []
-        for match in matches:
-            job = db.query(JobDescription).filter(JobDescription.id == match.job_id).first()
-            result.append({
-                "match_id": str(match.id),
-                "job_id": str(match.job_id),
-                "job_title": job.title if job else "Unknown",
-                "company": job.company if job else None,
-                "skills_match": float(match.skills_match) if match.skills_match else 0,
-                "experience_match": float(match.experience_match) if match.experience_match else 0,
-                "overall_score": float(match.overall_score) if match.overall_score else 0,
-                "matched_skills": match.matched_skills,
-                "missing_skills": match.missing_skills,
-                "recommendation": match.recommendation,
-                "status": match.status,
-                "created_at": match.created_at.isoformat() if match.created_at else None,
-            })
+        for match, job in rows:
+            result.append(
+                {
+                    "match_id": str(match.id),
+                    "job_id": str(match.job_id),
+                    "job_title": job.title if job else "Unknown",
+                    "company": job.company if job else None,
+                    "skills_match": float(match.skills_match)
+                    if match.skills_match
+                    else 0,
+                    "experience_match": float(match.experience_match)
+                    if match.experience_match
+                    else 0,
+                    "overall_score": float(match.overall_score)
+                    if match.overall_score
+                    else 0,
+                    "matched_skills": match.matched_skills,
+                    "missing_skills": match.missing_skills,
+                    "recommendation": match.recommendation,
+                    "status": match.status,
+                    "created_at": match.created_at.isoformat()
+                    if match.created_at
+                    else None,
+                }
+            )
 
         return {
             "status": "success",
@@ -159,7 +190,9 @@ async def get_match(
         if not match:
             raise HTTPException(status_code=404, detail="Match not found")
 
-        candidate = db.query(Candidate).filter(Candidate.id == match.candidate_id).first()
+        candidate = (
+            db.query(Candidate).filter(Candidate.id == match.candidate_id).first()
+        )
         job = db.query(JobDescription).filter(JobDescription.id == match.job_id).first()
 
         return {
@@ -170,22 +203,32 @@ async def get_match(
                     "id": str(candidate.id),
                     "name": candidate.full_name,
                     "email": candidate.email,
-                } if candidate else None,
+                }
+                if candidate
+                else None,
                 "job": {
                     "id": str(job.id),
                     "title": job.title,
                     "company": job.company,
-                } if job else None,
+                }
+                if job
+                else None,
                 "skills_match": float(match.skills_match) if match.skills_match else 0,
-                "experience_match": float(match.experience_match) if match.experience_match else 0,
-                "overall_score": float(match.overall_score) if match.overall_score else 0,
+                "experience_match": float(match.experience_match)
+                if match.experience_match
+                else 0,
+                "overall_score": float(match.overall_score)
+                if match.overall_score
+                else 0,
                 "matched_skills": match.matched_skills,
                 "missing_skills": match.missing_skills,
                 "match_explanation": match.match_explanation,
                 "recommendation": match.recommendation,
                 "match_details": match.match_details_json,
                 "status": match.status,
-                "created_at": match.created_at.isoformat() if match.created_at else None,
+                "created_at": match.created_at.isoformat()
+                if match.created_at
+                else None,
                 "viewed_at": match.viewed_at.isoformat() if match.viewed_at else None,
             },
         }
@@ -212,9 +255,9 @@ async def update_match_status(
 
         # Mark as viewed if first time updating
         if not match.viewed_at:
-            match.viewed_at = datetime.utcnow()
+            match.viewed_at = datetime.utcnow()  # type: ignore[assignment]
 
-        match.status = status
+        match.status = status  # type: ignore[assignment]
         db.commit()
         db.refresh(match)
 
@@ -225,7 +268,9 @@ async def update_match_status(
             "data": {
                 "id": str(match.id),
                 "status": match.status,
-                "updated_at": match.updated_at.isoformat() if match.updated_at else None,
+                "updated_at": match.updated_at.isoformat()
+                if match.updated_at
+                else None,
             },
         }
 
