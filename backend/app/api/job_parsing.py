@@ -45,7 +45,7 @@ def verify_token(authorization: Optional[str] = Header(None)):
 async def parse_job_description(
     request: dict,
     token_payload: dict = Depends(verify_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Parse raw job description and extract structured data using Bedrock AI
@@ -69,7 +69,10 @@ async def parse_job_description(
             raise HTTPException(status_code=400, detail="job_description is required")
 
         if len(job_description) < 50:
-            raise HTTPException(status_code=400, detail="Job description too short (minimum 50 characters)")
+            raise HTTPException(
+                status_code=400,
+                detail="Job description too short (minimum 50 characters)",
+            )
 
         logger.info(f"Parsing job description (length: {len(job_description)} chars)")
 
@@ -77,10 +80,12 @@ async def parse_job_description(
         result = bedrock_service.parse_job_description(job_description)
 
         if not result or result.get("status") != "success":
-            logger.error(f"Bedrock parsing failed: {result.get('message', 'Unknown error')}")
+            logger.error(
+                f"Bedrock parsing failed: {(result or {}).get('message', 'Unknown error')}"
+            )
             raise HTTPException(
                 status_code=500,
-                detail=f"Job parsing failed: {result.get('message', 'AI service error')}"
+                detail=f"Job parsing failed: {(result or {}).get('message', 'AI service error')}",
             )
 
         parsed_data = result.get("data", {})
@@ -97,7 +102,7 @@ async def parse_job_description(
             nice_to_have_skills=",".join(parsed_data.get("nice_to_have_skills", [])),
             experience_required=parsed_data.get("years_required"),
             job_type=parsed_data.get("job_type", ""),
-            job_details_json=parsed_data
+            job_details_json=parsed_data,
         )
 
         db.add(job)
@@ -119,8 +124,8 @@ async def parse_job_description(
                 "required_skills": parsed_data.get("required_skills", []),
                 "nice_to_have_skills": parsed_data.get("nice_to_have_skills", []),
                 "salary_range": parsed_data.get("salary_range"),
-                "responsibilities": parsed_data.get("responsibilities", [])
-            }
+                "responsibilities": parsed_data.get("responsibilities", []),
+            },
         }
 
     except HTTPException:
@@ -132,8 +137,7 @@ async def parse_job_description(
 
 @router.post("/extract-skills", response_model=dict)
 async def extract_skills_from_text(
-    request: dict,
-    token_payload: dict = Depends(verify_token)
+    request: dict, token_payload: dict = Depends(verify_token)
 ):
     """
     Extract technical and soft skills from text (candidate profile, resume, etc)
@@ -153,7 +157,9 @@ async def extract_skills_from_text(
             raise HTTPException(status_code=400, detail="text is required")
 
         if len(text) < 50:
-            raise HTTPException(status_code=400, detail="Text too short (minimum 50 characters)")
+            raise HTTPException(
+                status_code=400, detail="Text too short (minimum 50 characters)"
+            )
 
         logger.info(f"Extracting skills from text (length: {len(text)} chars)")
 
@@ -161,14 +167,18 @@ async def extract_skills_from_text(
         result = bedrock_service.extract_skills(text)
 
         if not result or result.get("status") != "success":
-            logger.error(f"Skill extraction failed: {result.get('message', 'Unknown error')}")
+            logger.error(
+                f"Skill extraction failed: {(result or {}).get('message', 'Unknown error')}"
+            )
             raise HTTPException(
                 status_code=500,
-                detail=f"Skill extraction failed: {result.get('message', 'AI service error')}"
+                detail=f"Skill extraction failed: {(result or {}).get('message', 'AI service error')}",
             )
 
         skills_data = result.get("data", {})
-        logger.info(f"Skills extracted: {len(skills_data.get('technical_skills', []))} technical, {len(skills_data.get('soft_skills', []))} soft")
+        logger.info(
+            f"Skills extracted: {len(skills_data.get('technical_skills', []))} technical, {len(skills_data.get('soft_skills', []))} soft"
+        )
 
         return {
             "status": "success",
@@ -178,8 +188,8 @@ async def extract_skills_from_text(
                 "soft_skills": skills_data.get("soft_skills", []),
                 "proficiency_levels": skills_data.get("proficiency_levels", {}),
                 "total_technical": len(skills_data.get("technical_skills", [])),
-                "total_soft": len(skills_data.get("soft_skills", []))
-            }
+                "total_soft": len(skills_data.get("soft_skills", [])),
+            },
         }
 
     except HTTPException:

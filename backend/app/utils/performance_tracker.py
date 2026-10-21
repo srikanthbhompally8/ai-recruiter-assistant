@@ -13,9 +13,11 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class QueryMetric:
     """Individual query metric"""
+
     query_id: str
     duration_ms: float
     timestamp: str
@@ -23,9 +25,11 @@ class QueryMetric:
     status: str = "success"
     error: Optional[str] = None
 
+
 @dataclass
 class PerformanceSnapshot:
     """Snapshot of performance metrics at a point in time"""
+
     timestamp: str
     total_queries: int
     avg_query_time_ms: float
@@ -37,6 +41,7 @@ class PerformanceSnapshot:
     error_count: int
     error_rate: float
 
+
 class PerformanceTracker:
     """Tracks performance metrics for before/after comparison"""
 
@@ -44,7 +49,7 @@ class PerformanceTracker:
         self.name = name
         self.queries: List[QueryMetric] = []
         self.start_time = time.time()
-        self.endpoint_stats = defaultdict(lambda: {"count": 0, "total_time": 0})
+        self.endpoint_stats: dict = defaultdict(lambda: {"count": 0, "total_time": 0})
 
     def record_query(
         self,
@@ -52,7 +57,7 @@ class PerformanceTracker:
         duration_ms: float,
         endpoint: str,
         status: str = "success",
-        error: Optional[str] = None
+        error: Optional[str] = None,
     ):
         """Record a single query metric"""
         metric = QueryMetric(
@@ -61,7 +66,7 @@ class PerformanceTracker:
             timestamp=datetime.now().isoformat(),
             endpoint=endpoint,
             status=status,
-            error=error
+            error=error,
         )
         self.queries.append(metric)
 
@@ -84,7 +89,7 @@ class PerformanceTracker:
                 max_query_time_ms=0,
                 queries_per_second=0,
                 error_count=0,
-                error_rate=0
+                error_rate=0,
             )
 
         durations = [q.duration_ms for q in self.queries if q.status == "success"]
@@ -119,7 +124,9 @@ class PerformanceTracker:
             max_query_time_ms=round(max(durations), 2),
             queries_per_second=round(qps, 2),
             error_count=error_count,
-            error_rate=round((error_count / total_queries * 100) if total_queries > 0 else 0, 2)
+            error_rate=round(
+                (error_count / total_queries * 100) if total_queries > 0 else 0, 2
+            ),
         )
 
     def get_endpoint_metrics(self) -> Dict[str, Dict[str, float]]:
@@ -134,7 +141,7 @@ class PerformanceTracker:
                 "query_count": count,
                 "total_time_ms": round(total_time, 2),
                 "avg_time_ms": round(avg_time, 2),
-                "queries_per_second": round(count / (time.time() - self.start_time), 2)
+                "queries_per_second": round(count / (time.time() - self.start_time), 2),
             }
 
         return metrics
@@ -150,7 +157,7 @@ class PerformanceTracker:
             "uptime_seconds": round(time.time() - self.start_time, 2),
             "summary": asdict(stats),
             "endpoint_metrics": endpoint_metrics,
-            "total_metrics_recorded": len(self.queries)
+            "total_metrics_recorded": len(self.queries),
         }
 
     def reset(self):
@@ -160,13 +167,13 @@ class PerformanceTracker:
         self.endpoint_stats = defaultdict(lambda: {"count": 0, "total_time": 0})
         logger.info(f"Performance tracker '{self.name}' reset")
 
+
 class ComparisonAnalyzer:
     """Analyzes before/after performance comparison"""
 
     @staticmethod
     def compare_snapshots(
-        before: PerformanceSnapshot,
-        after: PerformanceSnapshot
+        before: PerformanceSnapshot, after: PerformanceSnapshot
     ) -> Dict[str, Any]:
         """Compare two performance snapshots"""
 
@@ -182,57 +189,51 @@ class ComparisonAnalyzer:
                     "before_ms": before.avg_query_time_ms,
                     "after_ms": after.avg_query_time_ms,
                     "improvement_percent": calculate_improvement(
-                        before.avg_query_time_ms,
-                        after.avg_query_time_ms
-                    )
+                        before.avg_query_time_ms, after.avg_query_time_ms
+                    ),
                 },
                 "p95_query_time": {
                     "before_ms": before.p95_query_time_ms,
                     "after_ms": after.p95_query_time_ms,
                     "improvement_percent": calculate_improvement(
-                        before.p95_query_time_ms,
-                        after.p95_query_time_ms
-                    )
+                        before.p95_query_time_ms, after.p95_query_time_ms
+                    ),
                 },
                 "p99_query_time": {
                     "before_ms": before.p99_query_time_ms,
                     "after_ms": after.p99_query_time_ms,
                     "improvement_percent": calculate_improvement(
-                        before.p99_query_time_ms,
-                        after.p99_query_time_ms
-                    )
+                        before.p99_query_time_ms, after.p99_query_time_ms
+                    ),
                 },
                 "throughput": {
                     "before_qps": before.queries_per_second,
                     "after_qps": after.queries_per_second,
                     "improvement_percent": calculate_improvement(
-                        before.queries_per_second,
-                        after.queries_per_second
-                    ) * -1  # Inverse for throughput (more is better)
+                        before.queries_per_second, after.queries_per_second
+                    )
+                    * -1,  # Inverse for throughput (more is better)
                 },
                 "error_rate": {
                     "before_percent": before.error_rate,
                     "after_percent": after.error_rate,
                     "improvement_percent": calculate_improvement(
-                        before.error_rate,
-                        after.error_rate
-                    )
-                }
+                        before.error_rate, after.error_rate
+                    ),
+                },
             },
             "summary": {
                 "total_before": before.total_queries,
                 "total_after": after.total_queries,
                 "query_time_reduction": f"{calculate_improvement(before.avg_query_time_ms, after.avg_query_time_ms):.1f}%",
                 "throughput_improvement": f"{abs(calculate_improvement(before.queries_per_second, after.queries_per_second)) * -1:.1f}%",
-                "error_rate_reduction": f"{calculate_improvement(before.error_rate, after.error_rate):.1f}%"
-            }
+                "error_rate_reduction": f"{calculate_improvement(before.error_rate, after.error_rate):.1f}%",
+            },
         }
 
     @staticmethod
     def generate_comparison_report(
-        name: str,
-        before: PerformanceSnapshot,
-        after: PerformanceSnapshot
+        name: str, before: PerformanceSnapshot, after: PerformanceSnapshot
     ) -> Dict[str, Any]:
         """Generate full comparison report"""
         comparison = ComparisonAnalyzer.compare_snapshots(before, after)
@@ -242,11 +243,13 @@ class ComparisonAnalyzer:
             "timestamp": datetime.now().isoformat(),
             "before_snapshot": asdict(before),
             "after_snapshot": asdict(after),
-            "analysis": comparison
+            "analysis": comparison,
         }
+
 
 # Global tracker instances
 _trackers = {}
+
 
 def get_tracker(name: str = "default") -> PerformanceTracker:
     """Get or create a tracker by name"""
@@ -254,10 +257,12 @@ def get_tracker(name: str = "default") -> PerformanceTracker:
         _trackers[name] = PerformanceTracker(name)
     return _trackers[name]
 
+
 def reset_tracker(name: str = "default"):
     """Reset a tracker"""
     if name in _trackers:
         _trackers[name].reset()
+
 
 def get_all_reports() -> Dict[str, Dict[str, Any]]:
     """Get reports from all trackers"""

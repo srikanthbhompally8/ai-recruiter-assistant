@@ -10,6 +10,7 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
+
 # Password hashing - use SHA256 for development due to bcrypt compatibility issues
 class PasswordHasher:
     """Simple password hasher using SHA256 (fallback for bcrypt issues)"""
@@ -23,6 +24,7 @@ class PasswordHasher:
     def verify(password: str, hash_str: str) -> bool:
         """Verify password against hash"""
         return PasswordHasher.hash(password) == hash_str
+
 
 pwd_context = PasswordHasher()
 
@@ -134,7 +136,9 @@ class AuthService:
             return None
 
     @staticmethod
-    def register_user(email: str, password: str, full_name: str = None) -> Optional[Dict]:
+    def register_user(
+        email: str, password: str, full_name: str | None = None
+    ) -> Optional[Dict]:
         """
         Register new user
 
@@ -159,6 +163,7 @@ class AuthService:
 
             # Create new user
             from uuid import uuid4
+
             user = User(
                 id=uuid4(),
                 email=email,
@@ -213,13 +218,13 @@ class AuthService:
                 return None
 
             # Verify password
-            if not AuthService.verify_password(password, user.password_hash):
+            if not AuthService.verify_password(password, user.password_hash):  # type: ignore[arg-type]
                 logger.warning(f"Invalid password for user: {email}")
                 return None
 
             # Generate tokens
-            access_token = AuthService.create_access_token(str(user.id), user.email)
-            refresh_token = AuthService.create_refresh_token(str(user.id), user.email)
+            access_token = AuthService.create_access_token(str(user.id), user.email)  # type: ignore[arg-type]
+            refresh_token = AuthService.create_refresh_token(str(user.id), user.email)  # type: ignore[arg-type]
 
             logger.info(f"User authenticated: {email}")
 
@@ -261,7 +266,7 @@ class AuthService:
         user_id = payload.get("user_id")
         email = payload.get("email")
 
-        new_access_token = AuthService.create_access_token(user_id, email)
+        new_access_token = AuthService.create_access_token(user_id, email)  # type: ignore[arg-type]
         logger.info(f"Access token refreshed for user: {email}")
 
         return new_access_token

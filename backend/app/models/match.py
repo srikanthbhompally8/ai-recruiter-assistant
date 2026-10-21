@@ -1,5 +1,15 @@
 """Match Model"""
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Numeric, Index, JSON, desc
+from sqlalchemy import (
+    Column,
+    String,
+    DateTime,
+    ForeignKey,
+    Text,
+    Numeric,
+    Index,
+    JSON,
+    desc,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime
@@ -10,8 +20,12 @@ class Match(Base):
     __tablename__ = "matches"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    candidate_id = Column(UUID(as_uuid=True), ForeignKey("candidates.id"), nullable=False)
-    job_id = Column(UUID(as_uuid=True), ForeignKey("job_descriptions.id"), nullable=False)
+    candidate_id = Column(
+        UUID(as_uuid=True), ForeignKey("candidates.id"), nullable=False
+    )
+    job_id = Column(
+        UUID(as_uuid=True), ForeignKey("job_descriptions.id"), nullable=False
+    )
 
     # Match scores (0-100)
     skills_match = Column(Numeric(5, 2), nullable=True)
@@ -34,9 +48,9 @@ class Match(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
-        Index('ix_matches_candidate_job', 'candidate_id', 'job_id', unique=True),
+        Index("ix_matches_candidate_job", "candidate_id", "job_id", unique=True),
         # Job's match list: WHERE job_id = ? ORDER BY overall_score DESC LIMIT n
-        Index('ix_matches_job_score', 'job_id', desc('overall_score')),
+        Index("ix_matches_job_score", "job_id", desc("overall_score")),
     )
 
     def __repr__(self):

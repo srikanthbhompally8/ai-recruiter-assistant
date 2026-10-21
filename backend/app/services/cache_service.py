@@ -12,17 +12,18 @@ from config.redis_config import REDIS_CONFIG
 
 logger = logging.getLogger(__name__)
 
+
 class CacheService:
     def __init__(self):
         try:
             self.redis_client = redis.Redis(
-                host=REDIS_CONFIG['host'],
-                port=REDIS_CONFIG['port'],
-                db=REDIS_CONFIG['db'],
+                host=REDIS_CONFIG["host"],
+                port=REDIS_CONFIG["port"],
+                db=REDIS_CONFIG["db"],
                 decode_responses=True,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
-            self.enabled = REDIS_CONFIG['enabled']
+            self.enabled = REDIS_CONFIG["enabled"]
             self._verify_connection()
         except Exception as e:
             logger.error(f"Redis initialization failed: {e}")
@@ -63,11 +64,7 @@ class CacheService:
             return False
 
         try:
-            self.redis_client.setex(
-                key,
-                ttl,
-                json.dumps(value)
-            )
+            self.redis_client.setex(key, ttl, json.dumps(value))
             logger.debug(f"Cache SET: {key} (TTL: {ttl}s)")
             return True
         except Exception as e:
@@ -106,20 +103,21 @@ class CacheService:
     def get_stats(self) -> dict:
         """Get cache statistics"""
         if not self.enabled or self.redis_client is None:
-            return {'enabled': False}
+            return {"enabled": False}
 
         try:
-            info = self.redis_client.info('stats')
+            info = self.redis_client.info("stats")
             return {
-                'enabled': True,
-                'total_connections': info.get('total_connections_received'),
-                'total_commands': info.get('total_commands_processed'),
-                'instantaneous_ops': info.get('instantaneous_ops_per_sec'),
-                'memory_used': info.get('used_memory_human')
+                "enabled": True,
+                "total_connections": info.get("total_connections_received"),
+                "total_commands": info.get("total_commands_processed"),
+                "instantaneous_ops": info.get("instantaneous_ops_per_sec"),
+                "memory_used": info.get("used_memory_human"),
             }
         except Exception as e:
             logger.error(f"Cache stats error: {e}")
-            return {'enabled': True, 'error': str(e)}
+            return {"enabled": True, "error": str(e)}
+
 
 # Singleton instance
 cache_service = CacheService()

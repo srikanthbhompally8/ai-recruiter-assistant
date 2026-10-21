@@ -8,7 +8,7 @@ Implements semantic skill matching with:
 """
 
 import logging
-from typing import List, Dict, Tuple, Optional, Set
+from typing import Any, List, Dict, Tuple, Optional, Set
 from dataclasses import dataclass
 from enum import Enum
 from sqlalchemy.orm import Session
@@ -19,14 +19,16 @@ logger = logging.getLogger(__name__)
 
 class ExperienceLevel(str, Enum):
     """Experience levels for weight configuration"""
-    JUNIOR = "junior"      # 0-2 years
-    MID = "mid"            # 3-5 years
-    SENIOR = "senior"      # 6-10 years
-    EXPERT = "expert"      # 10+ years
+
+    JUNIOR = "junior"  # 0-2 years
+    MID = "mid"  # 3-5 years
+    SENIOR = "senior"  # 6-10 years
+    EXPERT = "expert"  # 10+ years
 
 
 class JobCategory(str, Enum):
     """Job categories for configurable weights"""
+
     FRONTEND = "frontend"
     BACKEND = "backend"
     FULLSTACK = "fullstack"
@@ -40,6 +42,7 @@ class JobCategory(str, Enum):
 @dataclass
 class SkillMatch:
     """Represents a skill match result"""
+
     skill_name: str
     candidate_has: bool
     is_exact_match: bool
@@ -52,12 +55,13 @@ class SkillMatch:
 @dataclass
 class SkillMatchResult:
     """Complete skill matching result"""
+
     exact_matches: List[SkillMatch]
     related_matches: List[SkillMatch]
     missing_required: List[SkillMatch]
     missing_preferred: List[SkillMatch]
     skills_match_score: float  # 0-100
-    gap_analysis: Dict[str, any]
+    gap_analysis: Dict[str, Any]
 
 
 class SkillWeights:
@@ -69,7 +73,7 @@ class SkillWeights:
         related_match_weight: float = 0.6,
         missing_required_penalty: float = -0.5,
         missing_preferred_penalty: float = -0.1,
-        proficiency_bonus_weight: float = 0.3
+        proficiency_bonus_weight: float = 0.3,
     ):
         """Initialize skill match weights"""
         self.exact_match_weight = exact_match_weight
@@ -85,7 +89,7 @@ class SkillWeights:
             "related_match": self.related_match_weight,
             "missing_required_penalty": self.missing_required_penalty,
             "missing_preferred_penalty": self.missing_preferred_penalty,
-            "proficiency_bonus": self.proficiency_bonus_weight
+            "proficiency_bonus": self.proficiency_bonus_weight,
         }
 
 
@@ -96,20 +100,17 @@ SKILL_NORMALIZATION = {
     "python3": "python",
     "python 3": "python",
     "py": "python",
-
     # JavaScript variants
     "javascript": "javascript",
     "js": "javascript",
     "node": "nodejs",
     "node.js": "nodejs",
     "nodejs": "nodejs",
-
     # REST API variants
     "rest": "rest_api",
     "rest api": "rest_api",
     "restful": "rest_api",
     "restful api": "rest_api",
-
     # Database variants
     "sql": "sql",
     "postgresql": "postgresql",
@@ -117,25 +118,21 @@ SKILL_NORMALIZATION = {
     "mysql": "mysql",
     "mongodb": "mongodb",
     "mongo": "mongodb",
-
     # Cloud platforms
     "aws": "aws",
     "amazon web services": "aws",
     "gcp": "gcp",
     "google cloud": "gcp",
     "azure": "azure",
-
     # Containerization
     "docker": "docker",
     "kubernetes": "kubernetes",
     "k8s": "kubernetes",
-
     # Frontend frameworks
     "react": "react",
     "vue": "vue",
     "vue.js": "vue",
     "angular": "angular",
-
     # Testing
     "jest": "jest",
     "pytest": "pytest",
@@ -167,14 +164,16 @@ class SkillMatcherService:
         db: Session,
         weights: Optional[SkillWeights] = None,
         job_category: JobCategory = JobCategory.OTHER,
-        experience_level: ExperienceLevel = ExperienceLevel.MID
+        experience_level: ExperienceLevel = ExperienceLevel.MID,
     ):
         """Initialize skill matcher service"""
         self.db = db
         self.weights = weights or SkillWeights()
         self.job_category = job_category
         self.experience_level = experience_level
-        logger.info(f"SkillMatcherService initialized: {job_category}, {experience_level}")
+        logger.info(
+            f"SkillMatcherService initialized: {job_category}, {experience_level}"
+        )
 
     def normalize_skill(self, skill: str) -> str:
         """
@@ -228,9 +227,7 @@ class SkillMatcherService:
             return 0.0
 
     def match_skills(
-        self,
-        candidate: Candidate,
-        job: JobDescription
+        self, candidate: Candidate, job: JobDescription
     ) -> SkillMatchResult:
         """
         Match candidate skills to job requirements.
@@ -245,11 +242,13 @@ class SkillMatcherService:
         try:
             # Parse candidate skills
             candidate_skills = self._parse_skills(candidate)
-            candidate_skills_normalized = {self.normalize_skill(s) for s in candidate_skills}
+            candidate_skills_normalized = {
+                self.normalize_skill(s) for s in candidate_skills
+            }
 
             # Parse job required and preferred skills
-            required_skills = self._parse_skills_from_string(job.required_skills)
-            preferred_skills = self._parse_skills_from_string(job.nice_to_have_skills)
+            required_skills = self._parse_skills_from_string(job.required_skills)  # type: ignore[arg-type]
+            preferred_skills = self._parse_skills_from_string(job.nice_to_have_skills)  # type: ignore[arg-type]
 
             required_normalized = {self.normalize_skill(s) for s in required_skills}
             preferred_normalized = {self.normalize_skill(s) for s in preferred_skills}
@@ -264,67 +263,83 @@ class SkillMatcherService:
             for req_skill in required_normalized:
                 if req_skill in candidate_skills_normalized:
                     # Exact match
-                    exact_matches.append(SkillMatch(
-                        skill_name=req_skill,
-                        candidate_has=True,
-                        is_exact_match=True,
-                        is_related_match=False,
-                        importance="high",
-                        score=100.0
-                    ))
-                else:
-                    # Check for related skills
-                    related_score = self._find_related_skill(req_skill, candidate_skills_normalized)
-                    if related_score > 0.5:
-                        related_matches.append(SkillMatch(
+                    exact_matches.append(
+                        SkillMatch(
                             skill_name=req_skill,
                             candidate_has=True,
-                            is_exact_match=False,
-                            is_related_match=True,
-                            importance="high",
-                            score=related_score * 100
-                        ))
-                    else:
-                        missing_required.append(SkillMatch(
-                            skill_name=req_skill,
-                            candidate_has=False,
-                            is_exact_match=False,
+                            is_exact_match=True,
                             is_related_match=False,
                             importance="high",
-                            score=0.0
-                        ))
+                            score=100.0,
+                        )
+                    )
+                else:
+                    # Check for related skills
+                    related_score = self._find_related_skill(
+                        req_skill, candidate_skills_normalized
+                    )
+                    if related_score > 0.5:
+                        related_matches.append(
+                            SkillMatch(
+                                skill_name=req_skill,
+                                candidate_has=True,
+                                is_exact_match=False,
+                                is_related_match=True,
+                                importance="high",
+                                score=related_score * 100,
+                            )
+                        )
+                    else:
+                        missing_required.append(
+                            SkillMatch(
+                                skill_name=req_skill,
+                                candidate_has=False,
+                                is_exact_match=False,
+                                is_related_match=False,
+                                importance="high",
+                                score=0.0,
+                            )
+                        )
 
             # Check preferred skills
             for pref_skill in preferred_normalized:
                 if pref_skill in candidate_skills_normalized:
-                    exact_matches.append(SkillMatch(
-                        skill_name=pref_skill,
-                        candidate_has=True,
-                        is_exact_match=True,
-                        is_related_match=False,
-                        importance="medium",
-                        score=100.0
-                    ))
-                else:
-                    related_score = self._find_related_skill(pref_skill, candidate_skills_normalized)
-                    if related_score > 0.5:
-                        related_matches.append(SkillMatch(
+                    exact_matches.append(
+                        SkillMatch(
                             skill_name=pref_skill,
                             candidate_has=True,
-                            is_exact_match=False,
-                            is_related_match=True,
-                            importance="medium",
-                            score=related_score * 100
-                        ))
-                    else:
-                        missing_preferred.append(SkillMatch(
-                            skill_name=pref_skill,
-                            candidate_has=False,
-                            is_exact_match=False,
+                            is_exact_match=True,
                             is_related_match=False,
                             importance="medium",
-                            score=0.0
-                        ))
+                            score=100.0,
+                        )
+                    )
+                else:
+                    related_score = self._find_related_skill(
+                        pref_skill, candidate_skills_normalized
+                    )
+                    if related_score > 0.5:
+                        related_matches.append(
+                            SkillMatch(
+                                skill_name=pref_skill,
+                                candidate_has=True,
+                                is_exact_match=False,
+                                is_related_match=True,
+                                importance="medium",
+                                score=related_score * 100,
+                            )
+                        )
+                    else:
+                        missing_preferred.append(
+                            SkillMatch(
+                                skill_name=pref_skill,
+                                candidate_has=False,
+                                is_exact_match=False,
+                                is_related_match=False,
+                                importance="medium",
+                                score=0.0,
+                            )
+                        )
 
             # Calculate overall skills match score
             skills_match_score = self._calculate_overall_score(
@@ -340,7 +355,8 @@ class SkillMatcherService:
                 "total_required": len(required_normalized),
                 "total_preferred": len(preferred_normalized),
                 "coverage": f"{(len(exact_matches) / (len(required_normalized) + len(preferred_normalized)) * 100):.1f}%"
-                    if (len(required_normalized) + len(preferred_normalized)) > 0 else "0%"
+                if (len(required_normalized) + len(preferred_normalized)) > 0
+                else "0%",
             }
 
             return SkillMatchResult(
@@ -349,7 +365,7 @@ class SkillMatcherService:
                 missing_required=missing_required,
                 missing_preferred=missing_preferred,
                 skills_match_score=skills_match_score,
-                gap_analysis=gap_analysis
+                gap_analysis=gap_analysis,
             )
 
         except Exception as e:
@@ -360,12 +376,12 @@ class SkillMatcherService:
                 missing_required=[],
                 missing_preferred=[],
                 skills_match_score=0.0,
-                gap_analysis={"error": str(e)}
+                gap_analysis={"error": str(e)},
             )
 
     def _parse_skills(self, candidate: Candidate) -> List[str]:
         """Parse candidate skills from multiple sources"""
-        skills = []
+        skills: list = []
 
         # From skills field
         if candidate.skills:
@@ -394,7 +410,9 @@ class SkillMatcherService:
 
         return []
 
-    def _find_related_skill(self, required_skill: str, candidate_skills: Set[str]) -> float:
+    def _find_related_skill(
+        self, required_skill: str, candidate_skills: Set[str]
+    ) -> float:
         """Find best related skill match for required skill"""
         best_score = 0.0
 
@@ -410,7 +428,7 @@ class SkillMatcherService:
         exact_matches: List[SkillMatch],
         related_matches: List[SkillMatch],
         missing_required: List[SkillMatch],
-        missing_preferred: List[SkillMatch]
+        missing_preferred: List[SkillMatch],
     ) -> float:
         """Calculate overall skills match score (0-100)"""
         try:
@@ -423,10 +441,14 @@ class SkillMatcherService:
             score += len(related_matches) * self.weights.related_match_weight * 3.0
 
             # Subtract for missing required skills
-            score += len(missing_required) * self.weights.missing_required_penalty * 10.0
+            score += (
+                len(missing_required) * self.weights.missing_required_penalty * 10.0
+            )
 
             # Subtract for missing preferred skills
-            score += len(missing_preferred) * self.weights.missing_preferred_penalty * 3.0
+            score += (
+                len(missing_preferred) * self.weights.missing_preferred_penalty * 3.0
+            )
 
             # Ensure score stays within 0-100
             return max(0.0, min(100.0, score))
@@ -436,10 +458,7 @@ class SkillMatcherService:
             return 50.0
 
     def get_top_candidates_by_skills(
-        self,
-        job_id: str,
-        limit: int = 10,
-        min_score: float = 0.6
+        self, job_id: str, limit: int = 10, min_score: float = 0.6
     ) -> List[Dict]:
         """
         Get top candidates ranked by skill match for a specific job.
@@ -458,13 +477,15 @@ class SkillMatcherService:
             # Convert string to UUID if needed
             if isinstance(job_id, str):
                 try:
-                    job_id = uuid_module.UUID(job_id)
+                    job_id = uuid_module.UUID(job_id)  # type: ignore[assignment]
                 except:
                     pass
 
-            job = self.db.query(JobDescription).filter(
-                JobDescription.id == job_id
-            ).first()
+            job = (
+                self.db.query(JobDescription)
+                .filter(JobDescription.id == job_id)
+                .first()
+            )
 
             if not job:
                 logger.warning(f"Job {job_id} not found")
@@ -472,7 +493,7 @@ class SkillMatcherService:
 
             batch_size = 100
             last_id = None
-            rankings = []
+            rankings: list[dict] = []
 
             # Keyset pagination on the primary key: deterministic order, and each page
             # costs the same regardless of position (OFFSET cost grows with the page number)
@@ -490,16 +511,18 @@ class SkillMatcherService:
                     normalized_score = match_result.skills_match_score / 100.0
 
                     if normalized_score >= min_score:
-                        rankings.append({
-                            "candidate_id": str(candidate.id),
-                            "name": candidate.full_name,
-                            "email": candidate.email,
-                            "score": round(normalized_score, 3),
-                            "exact_matches": len(match_result.exact_matches),
-                            "related_matches": len(match_result.related_matches),
-                            "missing_required": len(match_result.missing_required),
-                            "gap_analysis": match_result.gap_analysis
-                        })
+                        rankings.append(
+                            {
+                                "candidate_id": str(candidate.id),
+                                "name": candidate.full_name,
+                                "email": candidate.email,
+                                "score": round(normalized_score, 3),
+                                "exact_matches": len(match_result.exact_matches),
+                                "related_matches": len(match_result.related_matches),
+                                "missing_required": len(match_result.missing_required),
+                                "gap_analysis": match_result.gap_analysis,
+                            }
+                        )
 
                 if len(rankings) >= limit * 2:
                     break

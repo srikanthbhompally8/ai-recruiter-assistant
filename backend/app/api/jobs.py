@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class JobDescriptionCreate(BaseModel):
     """Schema for creating job description"""
+
     title: str
     company: str
     description: str
@@ -29,6 +30,7 @@ class JobDescriptionCreate(BaseModel):
 
 class JobDescriptionUpdate(BaseModel):
     """Schema for updating job description"""
+
     title: Optional[str] = None
     company: Optional[str] = None
     description: Optional[str] = None
@@ -102,7 +104,7 @@ async def create_job(
 async def list_jobs(
     skip: int = 0,
     limit: int = 50,
-    status: str = None,
+    status: str | None = None,
     db: Session = Depends(get_db),
 ):
     """

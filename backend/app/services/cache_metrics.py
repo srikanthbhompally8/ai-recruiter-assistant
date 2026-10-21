@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class CacheMetrics:
     def __init__(self):
         self.hits = 0
@@ -25,7 +26,9 @@ class CacheMetrics:
     def record_hit(self):
         self.hits += 1
         if self.hits % 100 == 0:
-            logger.info(f"Cache metrics - Hits: {self.hits}, Hit rate: {self.hit_rate:.1f}%")
+            logger.info(
+                f"Cache metrics - Hits: {self.hits}, Hit rate: {self.hit_rate:.1f}%"
+            )
 
     def record_miss(self):
         self.misses += 1
@@ -42,8 +45,9 @@ class CacheMetrics:
             "hit_rate": f"{self.hit_rate:.1f}%",
             "total_requests": self.hits + self.misses,
             "uptime_seconds": uptime,
-            "redis_stats": cache_service.get_stats()
+            "redis_stats": cache_service.get_stats(),
         }
+
 
 # Singleton instance
 cache_metrics = CacheMetrics()

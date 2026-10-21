@@ -1,5 +1,14 @@
 """Job Description Model"""
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Numeric, JSON
+from sqlalchemy import (
+    Column,
+    String,
+    Integer,
+    DateTime,
+    ForeignKey,
+    Text,
+    Numeric,
+    JSON,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 from datetime import datetime

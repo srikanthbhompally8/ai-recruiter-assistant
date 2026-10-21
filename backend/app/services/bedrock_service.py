@@ -8,6 +8,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class BedrockService:
     """Service for AWS Bedrock AI operations using Converse API"""
 
@@ -15,7 +16,7 @@ class BedrockService:
         """Initialize Bedrock client"""
         try:
             self.client = boto3.client(
-                'bedrock-runtime',
+                "bedrock-runtime",
                 region_name=settings.AWS_REGION,
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
@@ -60,48 +61,35 @@ Return ONLY the JSON object, no other text."""
 
             response = self.client.converse(
                 modelId=self.model_id,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                inferenceConfig={
-                    "maxTokens": 1024,
-                    "temperature": 0.7
-                }
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 1024, "temperature": 0.7},
             )
 
             logger.info(f"Bedrock response received for job parsing")
 
             # Extract content from Converse API response
-            if 'output' in response and 'message' in response['output']:
-                message = response['output']['message']
-                if 'content' in message and len(message['content']) > 0:
-                    content = message['content'][0].get('text', '')
+            if "output" in response and "message" in response["output"]:
+                message = response["output"]["message"]
+                if "content" in message and len(message["content"]) > 0:
+                    content = message["content"][0].get("text", "")
 
                     # Clean up response (remove markdown code blocks if present)
                     content = content.strip()
-                    if content.startswith('```json'):
+                    if content.startswith("```json"):
                         content = content[7:]
-                    if content.startswith('```'):
+                    if content.startswith("```"):
                         content = content[3:]
-                    if content.endswith('```'):
+                    if content.endswith("```"):
                         content = content[:-3]
                     content = content.strip()
 
                     # Parse JSON
                     parsed_data = json.loads(content)
-                    logger.info(f"Job description parsed: {parsed_data.get('job_title', 'Unknown')}")
+                    logger.info(
+                        f"Job description parsed: {parsed_data.get('job_title', 'Unknown')}"
+                    )
 
-                    return {
-                        "status": "success",
-                        "data": parsed_data
-                    }
+                    return {"status": "success", "data": parsed_data}
 
             logger.error("No content in Bedrock response")
             return {"status": "error", "message": "No content in response"}
@@ -141,43 +129,30 @@ Return ONLY the JSON object."""
 
             response = self.client.converse(
                 modelId=self.model_id,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                inferenceConfig={
-                    "maxTokens": 512,
-                    "temperature": 0.7
-                }
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 512, "temperature": 0.7},
             )
 
             # Extract content from response
-            if 'output' in response and 'message' in response['output']:
-                message = response['output']['message']
-                if 'content' in message and len(message['content']) > 0:
-                    content = message['content'][0].get('text', '')
+            if "output" in response and "message" in response["output"]:
+                message = response["output"]["message"]
+                if "content" in message and len(message["content"]) > 0:
+                    content = message["content"][0].get("text", "")
                     content = content.strip()
-                    if content.startswith('```json'):
+                    if content.startswith("```json"):
                         content = content[7:]
-                    if content.startswith('```'):
+                    if content.startswith("```"):
                         content = content[3:]
-                    if content.endswith('```'):
+                    if content.endswith("```"):
                         content = content[:-3]
                     content = content.strip()
 
                     parsed_data = json.loads(content)
-                    logger.info(f"Skills extracted: {len(parsed_data.get('technical_skills', []))} technical")
+                    logger.info(
+                        f"Skills extracted: {len(parsed_data.get('technical_skills', []))} technical"
+                    )
 
-                    return {
-                        "status": "success",
-                        "data": parsed_data
-                    }
+                    return {"status": "success", "data": parsed_data}
 
             logger.error("No content in skill extraction response")
             return {"status": "error", "message": "No content in response"}

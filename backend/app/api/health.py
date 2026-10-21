@@ -22,14 +22,11 @@ async def get_pool_stats(db: Session = Depends(get_db)):
     """Get connection pool statistics (admin only)"""
     try:
         from app.utils.pool_monitor import get_monitor
+
         monitor = get_monitor()
-        return {
-            "status": "success",
-            "pool_statistics": monitor.get_stats()
-        }
+        return {"status": "success", "pool_statistics": monitor.get_stats()}
     except Exception as e:
         logger.error(f"Error getting pool stats: {e}")
         raise HTTPException(
-            status_code=500,
-            detail="Could not retrieve pool statistics"
+            status_code=500, detail="Could not retrieve pool statistics"
         )

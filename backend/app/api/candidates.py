@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @router.post("/upload-resume")
 async def upload_resume(
     file: UploadFile = File(...),
-    candidate_id: str = None,
+    candidate_id: str | None = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -82,8 +82,8 @@ async def upload_resume(
             db.refresh(candidate)
 
         # Update candidate with file info
-        candidate.resume_file_path = file_key
-        candidate.resume_s3_key = file_key
+        candidate.resume_file_path = file_key  # type: ignore[assignment]
+        candidate.resume_s3_key = file_key  # type: ignore[assignment]
         db.commit()
 
         # Queue async parsing task
@@ -110,7 +110,7 @@ async def upload_resume(
 async def list_candidates(
     skip: int = 0,
     limit: int = 50,
-    status: str = None,
+    status: str | None = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -182,8 +182,12 @@ async def get_candidate(
                 "profile_json": candidate.profile_json,
                 "resume_s3_key": candidate.resume_s3_key,
                 "status": candidate.status,
-                "created_at": candidate.created_at.isoformat() if candidate.created_at else None,
-                "updated_at": candidate.updated_at.isoformat() if candidate.updated_at else None,
+                "created_at": candidate.created_at.isoformat()
+                if candidate.created_at
+                else None,
+                "updated_at": candidate.updated_at.isoformat()
+                if candidate.updated_at
+                else None,
             },
         }
 

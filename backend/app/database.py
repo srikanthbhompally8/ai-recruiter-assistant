@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 ENABLE_QUERY_LOGGING = settings.DEBUG and settings.ENVIRONMENT == "development"
 
 if ENABLE_QUERY_LOGGING:
-    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
 
 def _build_engine():
     """Create the engine with dialect-appropriate options.
@@ -45,6 +46,7 @@ engine = _build_engine()
 # Initialize pool monitoring
 try:
     from app.utils.pool_monitor import init_monitor
+
     pool_monitor = init_monitor(engine)
 except Exception as e:
     logger.warning(f"Could not initialize pool monitor: {e}")

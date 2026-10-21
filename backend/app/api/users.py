@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class UpdateUserRoleRequest(BaseModel):
     """Update user role request"""
+
     role: str  # admin, recruiter, viewer
 
 
@@ -149,11 +150,13 @@ async def update_user_role(
 
         # Update role
         old_role = user.role
-        user.role = request.role
+        user.role = request.role  # type: ignore[assignment]
         db.commit()
         db.refresh(user)
 
-        logger.info(f"User role updated: {user.email} ({old_role} → {request.role}) by {current_user['email']}")
+        logger.info(
+            f"User role updated: {user.email} ({old_role} → {request.role}) by {current_user['email']}"
+        )
 
         return {
             "status": "success",
@@ -198,21 +201,27 @@ async def update_user_status(
 
         # Prevent disabling the last active admin
         if user.role == "admin" and not is_active:
-            active_admins = db.query(User).filter(
-                User.role == "admin",
-                User.is_active == True,
-            ).count()
+            active_admins = (
+                db.query(User)
+                .filter(
+                    User.role == "admin",
+                    User.is_active == True,
+                )
+                .count()
+            )
             if active_admins == 1:
                 raise HTTPException(
                     status_code=400,
                     detail="Cannot disable the last active admin",
                 )
 
-        user.is_active = is_active
+        user.is_active = is_active  # type: ignore[assignment]
         db.commit()
         db.refresh(user)
 
-        logger.info(f"User status updated: {user.email} (active={is_active}) by {current_user['email']}")
+        logger.info(
+            f"User status updated: {user.email} (active={is_active}) by {current_user['email']}"
+        )
 
         return {
             "status": "success",

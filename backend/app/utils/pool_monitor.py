@@ -9,6 +9,7 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
+
 class PoolMonitor:
     """Monitors database connection pool statistics"""
 
@@ -26,11 +27,13 @@ class PoolMonitor:
         @event.listens_for(engine, "connect")
         def receive_connect(dbapi_conn, connection_record):
             self.created += 1
-            self.events.append({
-                "type": "connect",
-                "timestamp": datetime.now().isoformat(),
-                "total_created": self.created
-            })
+            self.events.append(
+                {
+                    "type": "connect",
+                    "timestamp": datetime.now().isoformat(),
+                    "total_created": self.created,
+                }
+            )
             logger.debug(f"Pool: Connection created (total: {self.created})")
 
         @event.listens_for(engine, "checkout")
@@ -49,7 +52,6 @@ class PoolMonitor:
             self.checked_out = max(0, self.checked_out - 1)
             logger.debug(f"Pool: Connection returned (active: {self.checked_out})")
 
-
         @event.listens_for(Pool, "close")
         def receive_close(dbapi_conn, connection_record):
             logger.debug("Pool: Connection closed")
@@ -65,7 +67,7 @@ class PoolMonitor:
             "active_checkouts": self.checked_out,
             "total_checkins": self.checked_in,
             "overflow_connections": self.overflow_created,
-            "health": "healthy" if self.overflow_created == 0 else "warning"
+            "health": "healthy" if self.overflow_created == 0 else "warning",
         }
 
     def reset(self):
@@ -77,8 +79,10 @@ class PoolMonitor:
         self.start_time = datetime.now()
         self.events = []
 
+
 # Global monitor instance
 _monitor = None
+
 
 def init_monitor(engine) -> PoolMonitor:
     """Initialize the pool monitor"""
@@ -88,8 +92,11 @@ def init_monitor(engine) -> PoolMonitor:
     logger.info("Connection pool monitoring initialized")
     return _monitor
 
+
 def get_monitor() -> PoolMonitor:
     """Get the global monitor instance"""
     if _monitor is None:
-        raise RuntimeError("Pool monitor not initialized. Call init_monitor(engine) first.")
+        raise RuntimeError(
+            "Pool monitor not initialized. Call init_monitor(engine) first."
+        )
     return _monitor

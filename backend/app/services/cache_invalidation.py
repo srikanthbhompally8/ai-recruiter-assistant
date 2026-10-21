@@ -7,6 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class CacheInvalidation:
     @staticmethod
     def invalidate_candidate(candidate_id: str):
@@ -20,11 +21,7 @@ class CacheInvalidation:
     @staticmethod
     def invalidate_job(job_id: str):
         """Invalidate all caches related to a job"""
-        patterns = [
-            f"match:*:{job_id}",
-            f"rank:{job_id}:*",
-            f"gaps:*:{job_id}"
-        ]
+        patterns = [f"match:*:{job_id}", f"rank:{job_id}:*", f"gaps:*:{job_id}"]
         for pattern in patterns:
             cache_service.clear_pattern(pattern)
         logger.info(f"Invalidated cache for job {job_id}")
@@ -34,5 +31,6 @@ class CacheInvalidation:
         """Clear all caches - use with caution"""
         cache_service.clear_pattern("*")
         logger.warning("All caches cleared")
+
 
 cache_invalidation = CacheInvalidation()

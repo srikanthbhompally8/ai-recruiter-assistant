@@ -103,9 +103,12 @@ def check_role(required_roles: List[str]):
     Returns:
         Async function that checks user role
     """
+
     async def role_checker(current_user: dict = Depends(get_current_user_with_role)):
         if current_user["role"] not in required_roles:
-            logger.warning(f"Access denied for user {current_user['email']} - role {current_user['role']}")
+            logger.warning(
+                f"Access denied for user {current_user['email']} - role {current_user['role']}"
+            )
             raise HTTPException(
                 status_code=403,
                 detail=f"Access denied. Required roles: {', '.join(required_roles)}",
