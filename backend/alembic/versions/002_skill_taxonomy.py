@@ -72,4 +72,4 @@ def downgrade() -> None:
     op.drop_table('job_skills')
     op.drop_table('candidate_skills')
     op.drop_table('skill_taxonomy')
-    op.execute('DROP EXTENSION IF NOT EXISTS vector')
+    op.execute('DROP EXTENSION IF EXISTS vector')
