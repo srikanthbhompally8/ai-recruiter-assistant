@@ -22,13 +22,22 @@ import uuid
 
 @pytest.fixture
 def db():
-    """Create in-memory SQLite database for testing"""
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine)
-    session = SessionLocal()
+    """Session on the PostgreSQL test database, rolled back after each test.
+
+    The models use PostgreSQL UUID columns, which SQLite cannot compile.
+    """
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        pytest.skip("DATABASE_URL is not set")
+    engine = create_engine(url)
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = sessionmaker(bind=connection)()
     yield session
     session.close()
+    transaction.rollback()
+    connection.close()
+    engine.dispose()
 
 
 @pytest.fixture

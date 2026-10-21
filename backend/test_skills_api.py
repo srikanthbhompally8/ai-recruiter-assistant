@@ -25,13 +25,18 @@ import uuid
 
 @pytest.fixture(scope="function")
 def db_session(tmp_path):
-    """Create file-based SQLite database with all test data"""
-    # Use a file-based database to avoid in-memory transaction issues
-    db_file = tmp_path / "test.db"
-    engine = create_engine(f"sqlite:///{db_file}", connect_args={"check_same_thread": False})
-    Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
-    session = SessionLocal()
+    """Session on the PostgreSQL test database with all test data.
+
+    Everything is written inside one transaction that is rolled back after the
+    test, so tests stay isolated. The app uses the same session via get_db.
+    """
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        pytest.skip("DATABASE_URL is not set")
+    engine = create_engine(url)
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = sessionmaker(bind=connection, autoflush=False, expire_on_commit=False)()
 
     # Create recruiter
     recruiter_id = uuid.uuid4()
@@ -83,6 +88,9 @@ def db_session(tmp_path):
 
     yield session
     session.close()
+    transaction.rollback()
+    connection.close()
+    engine.dispose()
 
 
 @pytest.fixture

@@ -106,7 +106,9 @@ class TestAuthenticationFailures:
 
     def test_register_duplicate_email(self):
         """Failure: Register with existing email"""
-        email = "duplicate@example.com"
+        from uuid import uuid4
+
+        email = f"duplicate-{uuid4().hex[:8]}@example.com"
         password = "Password123!"
 
         # First registration succeeds
@@ -131,12 +133,13 @@ class TestAuthenticationFailures:
         from app.models import User
         from uuid import uuid4
 
+        inactive_email = f"inactive-{uuid4().hex[:8]}@example.com"
         db = SessionLocal()
         try:
             # Create inactive user
             user = User(
                 id=uuid4(),
-                email="inactive@example.com",
+                email=inactive_email,
                 password_hash=auth_service.hash_password("Password123!"),
                 is_active=False,
             )
@@ -145,7 +148,7 @@ class TestAuthenticationFailures:
 
             # Try to login
             result = auth_service.authenticate_user(
-                "inactive@example.com",
+                inactive_email,
                 "Password123!"
             )
             assert result is None, "Should reject inactive user"
