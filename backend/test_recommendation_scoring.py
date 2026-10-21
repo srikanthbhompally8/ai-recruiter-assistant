@@ -27,13 +27,24 @@ from datetime import datetime
 
 @pytest.fixture
 def db():
-    """Create in-memory SQLite database for testing"""
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    SessionLocal = sessionmaker(bind=engine)
-    session = SessionLocal()
+    """Session on the PostgreSQL test database, rolled back after each test.
+
+    The models use PostgreSQL types (UUID), which SQLite cannot render, so this
+    test uses DATABASE_URL. The schema comes from the migrations. Everything a
+    test writes is rolled back, so tests stay isolated from each other.
+    """
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        pytest.skip("DATABASE_URL is not set")
+    engine = create_engine(url)
+    connection = engine.connect()
+    transaction = connection.begin()
+    session = Session(bind=connection)
     yield session
     session.close()
+    transaction.rollback()
+    connection.close()
+    engine.dispose()
 
 
 @pytest.fixture
