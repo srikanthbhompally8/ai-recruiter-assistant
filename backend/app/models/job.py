@@ -1,4 +1,5 @@
 """Job Description Model"""
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import (
     Column,
     String,
@@ -32,13 +33,15 @@ class JobDescription(Base):
     salary_max = Column(Numeric(10, 2), nullable=True)
 
     # Structured data
-    job_details_json = Column(JSON, nullable=True)
+    job_details_json = Column(JSONB, nullable=True)
     description = Column(Text, nullable=True)
 
     # Status
-    status = Column(String(50), default="open", index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String(50), default="open", index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Search optimization (future)
     # full_text_search = Column(TSVECTOR, nullable=True)

@@ -4,6 +4,15 @@ from app.models.user import User
 from app.models.candidate import Candidate
 from app.models.job import JobDescription
 from app.models.match import Match
-from app.models.skill import SkillTaxonomy
+from app.models.skill import SkillTaxonomy, CandidateSkill, JobSkill
 
-__all__ = ["Base", "User", "Candidate", "JobDescription", "Match", "SkillTaxonomy"]
+__all__ = [
+    "Base",
+    "User",
+    "Candidate",
+    "JobDescription",
+    "Match",
+    "SkillTaxonomy",
+    "CandidateSkill",
+    "JobSkill",
+]

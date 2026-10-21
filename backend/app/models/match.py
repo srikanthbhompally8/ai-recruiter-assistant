@@ -1,4 +1,5 @@
 """Match Model"""
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import (
     Column,
     String,
@@ -36,16 +37,18 @@ class Match(Base):
     matched_skills = Column(Text, nullable=True)
     missing_skills = Column(Text, nullable=True)
     match_explanation = Column(Text, nullable=True)
-    match_details_json = Column(JSON, nullable=True)
+    match_details_json = Column(JSONB, nullable=True)
 
     # Recommendation
     recommendation = Column(String(50), nullable=True)
 
     # Status
-    status = Column(String(50), default="pending")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String(50), default="pending", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     viewed_at = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     __table_args__ = (
         Index("ix_matches_candidate_job", "candidate_id", "job_id", unique=True),

@@ -1,4 +1,5 @@
 """Candidate Model"""
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -23,16 +24,18 @@ class Candidate(Base):
     current_company = Column(String(255), nullable=True)
 
     # Structured data
-    profile_json = Column(JSON, nullable=True)
+    profile_json = Column(JSONB, nullable=True)
 
     # File references
     resume_file_path = Column(String(512), nullable=True)
     resume_s3_key = Column(String(512), nullable=True)
 
     # Status & metadata
-    status = Column(String(50), default="active", index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String(50), default="active", index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # Search optimization (future)
     # full_text_search = Column(TSVECTOR, nullable=True)

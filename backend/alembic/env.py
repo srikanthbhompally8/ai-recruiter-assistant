@@ -13,6 +13,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.config import settings
 from app.database import Base
 
+# Import the models so their tables are registered on Base.metadata;
+# without this, autogenerate and alembic check see an empty schema.
+import app.models  # noqa: F401
+
 # Get Alembic config
 config = context.config
 
