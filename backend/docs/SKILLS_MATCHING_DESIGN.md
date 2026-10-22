@@ -116,9 +116,11 @@ Thresholds are provisional. They must be set from a labelled evaluation set (sec
 
 ## 12. Decisions needed before implementation
 
-1. **Embedding provider:** Bedrock Titan (managed; needs AWS access and budget) or a local model (no per-call cost; adds a dependency and hosting). Recommendation: Bedrock Titan v2, which is already configured.
-2. **Labelled evaluation set:** who labels the 300 pairs, and whether it can use real candidate data.
-3. **Taxonomy ownership:** who can add skills and aliases (recruiters, or admins only).
+**Status: proposed defaults, pending approval.** The owner approved these defaults on 2026-10-22. Change any of them by editing this section.
+
+1. **Embedding provider: Bedrock Titan v2** (`amazon.titan-embed-text-v2:0`, already configured). Needs AWS access and a per-call budget, which must be confirmed with the AWS account owner.
+2. **Evaluation set: about 50 pairs labelled by the implementer as a starting point, then reviewed by the owner.** This validates the approach. Thresholds still need the larger labelled set (section 8) before semantic matching is enabled.
+3. **Taxonomy ownership: admins only.** Recruiters may suggest skills and aliases; an admin approves them.
 
 ## 13. Acceptance criteria
 

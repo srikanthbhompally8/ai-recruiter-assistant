@@ -70,3 +70,22 @@ class JobSkill(Base):
     proficiency_level = Column(String(50), nullable=True)
     is_required = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class SkillAlias(Base):
+    """Maps an alternative spelling to its canonical skill name (e.g. "k8s" -> "kubernetes").
+
+    The canonical name is stored as text for now; a foreign key to skill_taxonomy
+    is added when canonical skills are seeded with categories (design section 10).
+    """
+
+    __tablename__ = "skill_aliases"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    alias = Column(String(255), unique=True, nullable=False)
+    canonical_name = Column(String(255), nullable=False, index=True)
+    source = Column(String(50), nullable=False, default="seed")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<SkillAlias {self.alias} -> {self.canonical_name}>"
