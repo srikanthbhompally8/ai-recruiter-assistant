@@ -49,3 +49,16 @@ def test_resolver_normalizes_case_and_whitespace(db):
 def test_unknown_skill_returns_normalized_text(db):
     alias_map = load_alias_map(db)
     assert resolve_skill("  Terraform  ", alias_map) == "terraform"
+
+
+def test_matcher_normalization_is_identical_before_and_after_seed(db):
+    """Wiring the alias table into the matcher must not change any normalized name."""
+    from app.services.skill_matcher_service import SkillMatcherService
+
+    before = SkillMatcherService(db)  # alias table empty: falls back to the dictionary
+    expected = {alias: before.normalize_skill(alias) for alias in SKILL_NORMALIZATION}
+
+    seed_aliases(db)
+    after = SkillMatcherService(db)  # alias table seeded: reads the database
+    for alias, canonical in SKILL_NORMALIZATION.items():
+        assert after.normalize_skill(alias) == expected[alias] == canonical, alias

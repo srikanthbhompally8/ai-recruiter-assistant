@@ -12,7 +12,7 @@ from typing import Any, List, Dict, Tuple, Optional, Set
 from dataclasses import dataclass
 from enum import Enum
 from sqlalchemy.orm import Session
-from app.models import Candidate, JobDescription
+from app.models import Candidate, JobDescription, SkillAlias
 
 logger = logging.getLogger(__name__)
 
@@ -168,11 +168,24 @@ class SkillMatcherService:
     ):
         """Initialize skill matcher service"""
         self.db = db
+        self._alias_map = self._load_alias_map(db)
         self.weights = weights or SkillWeights()
         self.job_category = job_category
         self.experience_level = experience_level
         logger.info(
             f"SkillMatcherService initialized: {job_category}, {experience_level}"
+        )
+
+    @staticmethod
+    def _load_alias_map(db: Session) -> Dict[str, str]:
+        """Alias -> canonical name, from skill_aliases.
+
+        Falls back to the built-in SKILL_NORMALIZATION when the table is empty
+        (for example before the seed has run), so results do not change.
+        """
+        rows = db.query(SkillAlias.alias, SkillAlias.canonical_name).all()
+        return {alias: canonical for alias, canonical in rows} or dict(
+            SKILL_NORMALIZATION
         )
 
     def normalize_skill(self, skill: str) -> str:
@@ -187,7 +200,7 @@ class SkillMatcherService:
         """
         try:
             normalized = skill.lower().strip()
-            return SKILL_NORMALIZATION.get(normalized, normalized)
+            return self._alias_map.get(normalized, normalized)
         except Exception as e:
             logger.warning(f"Error normalizing skill '{skill}': {e}")
             return skill.lower().strip()
