@@ -41,7 +41,7 @@ Three tiers, applied in priority order. A higher tier always wins for a given sk
 
 Tier 3 applies only to skills with no tier 1–2 match. Semantic similarity can't override an exact or alias match.
 
-Below `SKILL_SEMANTIC_REVIEW` (default 0.70): no match. Between REVIEW and ACCEPT: returned as a `needs_review` suggestion and not counted in the score.
+Below `SKILL_SEMANTIC_REVIEW` (provisional 0.50): no match. Between REVIEW and ACCEPT: returned as a `needs_review` suggestion and not counted in the score.
 
 ## 4. Data model
 
@@ -72,11 +72,11 @@ Settings (environment-overridable, in `app/config.py`):
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `SKILL_SEMANTIC_ACCEPT` | 0.85 | Counted as a semantic match |
-| `SKILL_SEMANTIC_REVIEW` | 0.70 | Below this: no match |
+| `SKILL_SEMANTIC_ACCEPT` | 0.60 (provisional) | Counted as a semantic match |
+| `SKILL_SEMANTIC_REVIEW` | 0.50 (provisional) | Below this: no match |
 | `SKILL_EMBEDDING_MODEL` | `amazon.titan-embed-text-v2:0` | Already in settings as `BEDROCK_EMBEDDINGS_MODEL` |
 
-Thresholds are provisional. They must be set from a labelled evaluation set (section 8), not from intuition.
+Thresholds are provisional. They were set on 2026-11-06 from 50 labelled pairs (section 8, results), using Titan v2 cosine similarity. They must be re-derived from the larger labelled set before semantic matching is enabled.
 
 ## 7. Caching and async
 
@@ -116,7 +116,7 @@ Thresholds are provisional. They must be set from a labelled evaluation set (sec
 
 ## 12. Decisions needed before implementation
 
-**Status: proposed defaults, pending approval.** The owner approved these defaults on 2026-10-22. Change any of them by editing this section.
+**Status: confirmed by the owner on 2026-11-05.** Change any of these by editing this section and recording the date.
 
 1. **Embedding provider: Bedrock Titan v2** (`amazon.titan-embed-text-v2:0`, already configured). Needs AWS access and a per-call budget, which must be confirmed with the AWS account owner.
 2. **Evaluation set: about 50 pairs labelled by the implementer as a starting point, then reviewed by the owner.** This validates the approach. Thresholds still need the larger labelled set (section 8) before semantic matching is enabled.
@@ -129,3 +129,19 @@ Thresholds are provisional. They must be set from a labelled evaluation set (sec
 - Changing a threshold or alias takes effect without a deploy, and invalidates cached results.
 - Evaluation results (precision/recall at chosen thresholds) recorded in this document.
 - Benchmarks recorded (section 9) on the target PostgreSQL environment.
+
+### 8.1 Results of the 50-pair evaluation (2026-11-06)
+
+Labels: `docs/SKILL_PAIRS_FOR_REVIEW.md` (14 match, 26 related, 10 different). Similarity: Titan v2 cosine, per pair.
+
+| Threshold | Pairs accepted | Matches caught | Related accepted | Precision (match) | Recall (match) |
+|---|---|---|---|---|---|
+| 0.50 | 11 | 8 | 3 | 0.73 | 0.57 |
+| 0.60 | 6 | 6 | 0 | 1.00 | 0.43 |
+| 0.70 | 3 | 3 | 0 | 1.00 | 0.21 |
+| 0.85 | 1 | 1 | 0 | 1.00 | 0.07 |
+
+Findings:
+- Most matches that score low are abbreviations or synonyms (k8s/kubernetes, aws/amazon web services, gcp/google cloud). The alias tier resolves these exactly, so the semantic tier mainly covers names missing from the alias table.
+- The highest related pair scores 0.598, just under the 0.60 accept threshold. The margin is thin.
+- 50 pairs is too small to set final values. Section 8's 300-pair target still applies.
