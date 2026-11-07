@@ -145,3 +145,17 @@ Findings:
 - Most matches that score low are abbreviations or synonyms (k8s/kubernetes, aws/amazon web services, gcp/google cloud). The alias tier resolves these exactly, so the semantic tier mainly covers names missing from the alias table.
 - The highest related pair scores 0.598, just under the 0.60 accept threshold. The margin is thin.
 - 50 pairs is too small to set final values. Section 8's 300-pair target still applies.
+
+**Combined evaluation (2026-11-06, 100 pairs: 50 owner-reviewed + 50 implementer-labelled)**
+
+| Threshold | Pairs accepted | Matches caught (of 29) | Related accepted | Precision (match) | Recall (match) |
+|---|---|---|---|---|---|
+| 0.50 | 18 | 15 | 3 | 0.83 | 0.52 |
+| 0.55 | 14 | 12 | 2 | 0.86 | 0.41 |
+| 0.60 | 10 | 10 | 0 | 1.00 | 0.34 |
+| 0.65 | 7 | 7 | 0 | 1.00 | 0.24 |
+| 0.70 | 4 | 4 | 0 | 1.00 | 0.14 |
+
+- Batch 2 labels were filled in by the implementer, not the owner. The combined result is therefore mostly the implementer's judgment and is not independent evidence.
+- No related pair scores 0.60 or above; the highest is 0.598.
+- Provisional values kept: accept 0.60, review 0.50. Re-derive from the 300-pair set before enabling semantic matching.
