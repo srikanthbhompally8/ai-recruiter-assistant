@@ -130,6 +130,13 @@ Thresholds are provisional. They were set on 2026-11-06 from 50 labelled pairs (
 - Evaluation results (precision/recall at chosen thresholds) recorded in this document.
 - Benchmarks recorded (section 9) on the target PostgreSQL environment.
 
+### 8.0 Review plan for the validated set
+
+- **Reviewer:** Srikanth Bhompally (owner). A second independent reviewer is recommended for disagreement checks.
+- **Target completion:** 2026-11-20 (date as provided by the owner; confirm if different).
+- **Scope:** about 200 new pairs, plus the 100 already labelled (batches 1 and 2), to reach about 300 in total.
+- **Independence:** the labels for the new pairs should not be copied from the implementer's proposals. Batch 1 labels were approved by the owner from the implementer's proposals and are not fully independent; batch 2 labels were filled by the implementer.
+
 ### 8.1 Results of the 50-pair evaluation (2026-11-06)
 
 Labels: `docs/SKILL_PAIRS_FOR_REVIEW.md` (14 match, 26 related, 10 different). Similarity: Titan v2 cosine, per pair.
