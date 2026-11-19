@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Semantic skill matching (feature-flagged; off by default).
+    # Thresholds are provisional until the 300-pair owner-reviewed set exists
+    # (docs/SKILLS_MATCHING_DESIGN.md section 8.1).
+    SKILL_SEMANTIC_MATCHING_ENABLED: bool = False
+    SKILL_SEMANTIC_ACCEPT: float = 0.60
+    SKILL_SEMANTIC_REVIEW: float = 0.50
+
     class Config:
         env_file = ".env"
         case_sensitive = True
